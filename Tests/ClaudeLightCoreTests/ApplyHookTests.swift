@@ -51,6 +51,47 @@ final class ApplyHookTests: XCTestCase {
         XCTAssertEqual(s.termSessionId, "w0t1p0:UUID")
     }
 
+    // MARK: – Terminal identity is captured once and preserved (#42)
+
+    func test_applyHook_preservesExistingTerminal_whenLaterEventHasNone() throws {
+        let store = tempStore()
+        let first = HookPayload(sessionID: "s1", hookEventName: "SessionStart", cwd: "/x/p", message: nil)
+        let terminal = TerminalContext(termProgram: "iTerm.app", tty: "ttys004", termSessionId: "w0t1p0:UUID")
+        try applyHook(first, to: store, now: now, terminal: terminal)
+
+        let later = HookPayload(sessionID: "s1", hookEventName: "PreToolUse", cwd: "/x/p", message: nil)
+        try applyHook(later, to: store, now: now.addingTimeInterval(5), terminal: nil)
+
+        let s = try XCTUnwrap(store.load(sessionID: "s1"))
+        XCTAssertEqual(s.termProgram, "iTerm.app")
+        XCTAssertEqual(s.tty, "ttys004")
+        XCTAssertEqual(s.termSessionId, "w0t1p0:UUID")
+    }
+
+    func test_applyHook_keepsFirstTTY_overLaterDifferentOne() throws {
+        let store = tempStore()
+        let first = HookPayload(sessionID: "s1", hookEventName: "SessionStart", cwd: "/x/p", message: nil)
+        try applyHook(first, to: store, now: now,
+                      terminal: TerminalContext(termProgram: "iTerm.app", tty: "ttys004", termSessionId: nil))
+        let later = HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil)
+        try applyHook(later, to: store, now: now.addingTimeInterval(5),
+                      terminal: TerminalContext(termProgram: "iTerm.app", tty: "ttys009", termSessionId: nil))
+        XCTAssertEqual(store.load(sessionID: "s1")?.tty, "ttys004")
+    }
+
+    func test_applyHook_fillsTerminal_whenExistingLacksIt() throws {
+        let store = tempStore()
+        let first = HookPayload(sessionID: "s1", hookEventName: "SessionStart", cwd: "/x/p", message: nil)
+        try applyHook(first, to: store, now: now, terminal: nil)
+        let later = HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil)
+        try applyHook(later, to: store, now: now.addingTimeInterval(5),
+                      terminal: TerminalContext(termProgram: "Apple_Terminal", tty: "ttys002", termSessionId: "T1"))
+        let s = try XCTUnwrap(store.load(sessionID: "s1"))
+        XCTAssertEqual(s.termProgram, "Apple_Terminal")
+        XCTAssertEqual(s.tty, "ttys002")
+        XCTAssertEqual(s.termSessionId, "T1")
+    }
+
     func test_applyHook_persistsTranscriptPath() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = SessionStore(directory: dir)

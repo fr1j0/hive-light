@@ -10,9 +10,13 @@ if let payload = try? ClaudeLightJSON.decoder.decode(HookPayload.self, from: inp
     if payload.hookEventName == "Stop", let path = payload.transcriptPath {
         transcriptJSONL = try? String(contentsOfFile: path, encoding: .utf8)
     }
+    // The ps-walk below is the expensive part of this hook and the terminal
+    // never changes mid-session, so skip it once the session has a stored TTY —
+    // applyHook keeps whatever identity was captured first (#42).
+    let hasStoredTTY = store.load(sessionID: payload.sessionID)?.tty != nil
     let terminal = TerminalContext(
         environment: ProcessInfo.processInfo.environment,
-        tty: resolveControllingTTY()
+        tty: hasStoredTTY ? nil : resolveControllingTTY()
     )
     try? applyHook(payload, to: store, now: Date(), transcriptJSONL: transcriptJSONL, terminal: terminal)
 }

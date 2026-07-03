@@ -9,8 +9,8 @@ public enum AggregateLight: String, Sendable {
 /// Sessions still considered live. A session's timestamp only refreshes when it
 /// fires a Claude Code hook event, so the TTL must be generous enough that a
 /// session left open and idle for hours doesn't vanish — while still clearing
-/// ghosts left by an abnormally-terminated session. Default: 8 hours.
-public func liveSessions(_ sessions: [Session], now: Date, ttl: TimeInterval = 8 * 3600) -> [Session] {
+/// ghosts left by an abnormally-terminated session. Default: `defaultSessionTTL`.
+public func liveSessions(_ sessions: [Session], now: Date, ttl: TimeInterval = defaultSessionTTL) -> [Session] {
     sessions.filter { now.timeIntervalSince($0.updatedAt) <= ttl }
 }
 

@@ -44,6 +44,60 @@ final class SessionStoreTests: XCTestCase {
         XCTAssertEqual(try store.loadAll().count, 0)
     }
 
+    // MARK: – load(sessionID:)
+
+    func test_load_returnsStoredSession() throws {
+        let store = tempStore()
+        try store.write(makeSession("a", .running))
+        let s = store.load(sessionID: "a")
+        XCTAssertEqual(s?.sessionID, "a")
+        XCTAssertEqual(s?.status, .running)
+    }
+
+    func test_load_returnsNil_whenMissingOrCorrupt() throws {
+        let store = tempStore()
+        XCTAssertNil(store.load(sessionID: "missing"))
+        try FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
+        try Data("not json".utf8).write(to: store.fileURL(for: "broken"))
+        XCTAssertNil(store.load(sessionID: "broken"))
+    }
+
+    // MARK: – prune (#42)
+
+    func test_prune_deletesExpiredSessions_keepsFresh() throws {
+        let store = tempStore()
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        var fresh = makeSession("fresh", .idle)
+        fresh.updatedAt = now.addingTimeInterval(-60)
+        var expired = makeSession("expired", .idle)
+        expired.updatedAt = now.addingTimeInterval(-defaultSessionTTL - 60)
+        try store.write(fresh)
+        try store.write(expired)
+        store.prune(now: now)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.fileURL(for: "fresh").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.fileURL(for: "expired").path))
+    }
+
+    func test_prune_deletesStaleCorruptFiles_keepsRecentCorrupt() throws {
+        let store = tempStore()
+        try FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
+        let staleURL = store.fileURL(for: "stale-corrupt")
+        let recentURL = store.fileURL(for: "recent-corrupt")
+        try Data("not json".utf8).write(to: staleURL)
+        try Data("not json".utf8).write(to: recentURL)
+        // Backdate the stale file's mtime past the TTL; "now" is the real clock here.
+        let old = Date().addingTimeInterval(-defaultSessionTTL - 60)
+        try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: staleURL.path)
+        store.prune(now: Date())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staleURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: recentURL.path))
+    }
+
+    func test_prune_onMissingDirectory_isNoOp() {
+        let store = tempStore() // never created
+        store.prune(now: Date())
+    }
+
     func test_loadAll_skipsCorruptFiles() throws {
         let store = tempStore()
         try store.write(makeSession("a", .running))
