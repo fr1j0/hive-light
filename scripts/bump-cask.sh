@@ -56,7 +56,7 @@ cp "$SRC_CASK" "$TAP_CASK"
 bash "$ROOT/scripts/render-cask.sh" "$TAP_CASK" "$VERSION" "$actual"
 echo "✓ rendered ${TAP_CASK}"
 
-# Optional lint if brew is available (the tap's CI enforces this on PRs).
+# Optional lint if brew is available (the tap's CI only gates PRs; direct pushes skip it).
 if command -v brew >/dev/null 2>&1; then
   if brew style "$TAP_CASK" >/dev/null 2>&1; then
     echo "✓ brew style clean"
@@ -67,4 +67,4 @@ fi
 
 echo
 echo "Done — tap cask rendered (nothing committed). Next, in $TAP_DIR:"
-echo "  git commit -am \"chore: claude-light $VERSION\" && git push origin main"
+echo "  git add Casks/claude-light.rb && git commit -m \"chore: claude-light $VERSION\" && git push origin main"
