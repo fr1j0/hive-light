@@ -51,6 +51,40 @@ final class ApplyHookTests: XCTestCase {
         XCTAssertEqual(s.termSessionId, "w0t1p0:UUID")
     }
 
+    // MARK: – Current tool on running sessions (#55)
+
+    func test_preToolUse_storesToolName() throws {
+        let store = tempStore()
+        let p = HookPayload(sessionID: "s1", hookEventName: "PreToolUse", cwd: "/x/p",
+                            message: nil, toolName: "Bash")
+        try applyHook(p, to: store, now: now)
+        let s = try XCTUnwrap(store.load(sessionID: "s1"))
+        XCTAssertEqual(s.status, .running)
+        XCTAssertEqual(s.toolName, "Bash")
+    }
+
+    func test_toolName_clearedWhenTurnEnds() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "PreToolUse", cwd: "/x/p",
+                                  message: nil, toolName: "Bash"), to: store, now: now)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil),
+                      to: store, now: now.addingTimeInterval(5))
+        let s = try XCTUnwrap(store.load(sessionID: "s1"))
+        XCTAssertEqual(s.status, .idle)
+        XCTAssertNil(s.toolName)
+    }
+
+    func test_toolName_clearedOnRunningEventWithoutTool() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "PreToolUse", cwd: "/x/p",
+                                  message: nil, toolName: "Bash"), to: store, now: now)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now.addingTimeInterval(5))
+        let s = try XCTUnwrap(store.load(sessionID: "s1"))
+        XCTAssertEqual(s.status, .running)
+        XCTAssertNil(s.toolName, "a new prompt starts thinking, not running the old tool")
+    }
+
     // MARK: – Terminal identity is captured once and preserved (#42)
 
     func test_applyHook_preservesExistingTerminal_whenLaterEventHasNone() throws {

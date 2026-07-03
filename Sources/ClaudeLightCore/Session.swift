@@ -16,13 +16,15 @@ public struct Session: Codable, Sendable, Equatable {
     public var cwd: String
     public var updatedAt: Date
     public var transcriptPath: String?
+    /// The tool currently executing, from the latest PreToolUse event (#55).
+    public var toolName: String?
     // Hosting-terminal identity, for focusing the session on click (#22).
     public var termProgram: String?
     public var tty: String?
     public var termSessionId: String?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
-                updatedAt: Date, transcriptPath: String? = nil,
+                updatedAt: Date, transcriptPath: String? = nil, toolName: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil) {
         self.sessionID = sessionID
         self.status = status
@@ -30,6 +32,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.cwd = cwd
         self.updatedAt = updatedAt
         self.transcriptPath = transcriptPath
+        self.toolName = toolName
         self.termProgram = termProgram
         self.tty = tty
         self.termSessionId = termSessionId
@@ -42,6 +45,7 @@ public struct Session: Codable, Sendable, Equatable {
         case cwd
         case updatedAt = "updated_at"
         case transcriptPath = "transcript_path"
+        case toolName = "tool_name"
         case termProgram = "term_program"
         case tty
         case termSessionId = "term_session_id"

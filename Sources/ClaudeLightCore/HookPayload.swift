@@ -6,13 +6,16 @@ public struct HookPayload: Codable, Sendable {
     public let cwd: String?
     public let message: String?
     public let transcriptPath: String?
+    public let toolName: String?
 
-    public init(sessionID: String, hookEventName: String, cwd: String?, message: String?, transcriptPath: String? = nil) {
+    public init(sessionID: String, hookEventName: String, cwd: String?, message: String?,
+                transcriptPath: String? = nil, toolName: String? = nil) {
         self.sessionID = sessionID
         self.hookEventName = hookEventName
         self.cwd = cwd
         self.message = message
         self.transcriptPath = transcriptPath
+        self.toolName = toolName
     }
 
     enum CodingKeys: String, CodingKey {
@@ -21,5 +24,6 @@ public struct HookPayload: Codable, Sendable {
         case cwd
         case message
         case transcriptPath = "transcript_path"
+        case toolName = "tool_name"
     }
 }

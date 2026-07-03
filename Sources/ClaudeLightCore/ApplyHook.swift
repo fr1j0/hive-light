@@ -19,6 +19,9 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             cwd: cwd,
             updatedAt: now,
             transcriptPath: payload.transcriptPath,
+            // Only PreToolUse names a tool; any other event means the previous
+            // tool is no longer what the session is doing (#55).
+            toolName: payload.hookEventName == "PreToolUse" ? payload.toolName : nil,
             termProgram: existing?.termProgram ?? terminal?.termProgram,
             tty: existing?.tty ?? terminal?.tty,
             termSessionId: existing?.termSessionId ?? terminal?.termSessionId

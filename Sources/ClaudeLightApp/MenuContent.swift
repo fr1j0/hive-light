@@ -188,6 +188,9 @@ struct MenuContent: View {
             let reason = watcher.errorReasons[session.sessionID] ?? "api error"
             return "\(session.project) — API error: \(reason)"
         }
+        if session.status == .running, let tool = session.toolName {
+            return "\(session.project) — running · \(tool)"
+        }
         return "\(session.project) — \(friendlyStatusLabel(for: session.status))"
     }
 

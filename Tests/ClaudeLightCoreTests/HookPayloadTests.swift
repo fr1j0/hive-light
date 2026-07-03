@@ -11,6 +11,12 @@ final class HookPayloadTests: XCTestCase {
         XCTAssertNil(p.message)
     }
 
+    func test_decodes_preToolUseWithToolName() throws {
+        let json = #"{"session_id":"s3","hook_event_name":"PreToolUse","cwd":"/tmp/proj","tool_name":"Bash"}"#
+        let p = try ClaudeLightJSON.decoder.decode(HookPayload.self, from: Data(json.utf8))
+        XCTAssertEqual(p.toolName, "Bash")
+    }
+
     func test_decodes_notificationWithMessage() throws {
         let json = #"{"session_id":"s2","hook_event_name":"Notification","message":"Claude needs your permission to use Bash"}"#
         let p = try ClaudeLightJSON.decoder.decode(HookPayload.self, from: Data(json.utf8))
