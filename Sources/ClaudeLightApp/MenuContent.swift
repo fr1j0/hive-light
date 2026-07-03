@@ -186,9 +186,9 @@ struct MenuContent: View {
     private func rowText(for session: Session) -> String {
         if session.status == .error {
             let reason = watcher.errorReasons[session.sessionID] ?? "api error"
-            return "\(session.project) — API error: \(reason)"
+            return "\(displayName(for: session)) — API error: \(reason)"
         }
-        return "\(session.project) — \(friendlyStatusLabel(for: session.status))"
+        return "\(displayName(for: session)) — \(friendlyStatusLabel(for: session.status))"
     }
 
     private func color(for status: SessionStatus) -> NSColor {

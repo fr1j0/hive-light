@@ -158,7 +158,9 @@ final class SessionWatcher: ObservableObject {
             }
         }
         subagentCache.evict(keeping: scannedTranscripts)
-        let sorted = sortedForMenu(live)
+        // Idle headless runs (plugin jobs, claude -p) are noise: dropped from
+        // the rows AND the counts/light so they can't hold the menu hostage.
+        let sorted = sortedForMenu(visibleSessions(live))
         // Post-error-detection so running→error transitions count; the first
         // reload only takes the baseline. The snapshot updates even while the
         // toggle is off, so enabling it never replays old transitions.
