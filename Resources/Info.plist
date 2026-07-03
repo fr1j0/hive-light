@@ -4,6 +4,8 @@
 <dict>
     <key>CFBundleExecutable</key>
     <string>ClaudeLightApp</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.fr1j0.claude-light</string>
     <key>CFBundleName</key>

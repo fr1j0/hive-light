@@ -15,6 +15,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/ClaudeLightApp          "$APP/Contents/MacOS/ClaudeLightApp"
 cp .build/release/claude-light-hook       "$APP/Contents/MacOS/claude-light-hook"
 cp Resources/Info.plist                   "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns                 "$APP/Contents/Resources/AppIcon.icns"
 
 echo "Built $APP"
 echo ""
