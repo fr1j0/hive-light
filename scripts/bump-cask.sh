@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Bump the Homebrew cask(s) to a released version. Downloads the release zip,
-# computes and VERIFIES its sha256 against the published checksum, then rewrites
-# `version` + `sha256` in the source cask (and the tap cask, if --tap is given).
+# Manual RECOVERY for the automated tap mirror. Normally release.yml's
+# "Mirror cask to Homebrew tap" step updates the tap on every release; run
+# this only when that step failed (see the workflow run's log).
 #
-# It only edits files — it does not commit, push, or merge. That's deliberate:
-# you review and open/merge the PRs (only the owner merges). Phase 1 of #26 —
-# kills the hand-editing / sha-copying / style-fixing done manually each release.
+# Downloads the release zip, computes and VERIFIES its sha256 against the
+# published checksum, then renders the template cask (Casks/claude-light.rb)
+# with the real version + sha256 into a local tap checkout.
 #
-#   scripts/bump-cask.sh 0.5.0
-#   scripts/bump-cask.sh 0.5.0 --tap ~/src/homebrew-claude-light
+#   scripts/bump-cask.sh 0.9.1 --tap ~/src/homebrew-claude-light
 #
+# It only edits files — commit and push in the tap yourself (as owner you
+# can push to the tap's main directly).
 # Requires: gh (authenticated), shasum, python3. Runs after the release exists.
 
 REPO="fr1j0/claude-light"
 
-usage() { echo "usage: $0 <version> [--tap <tap-checkout-dir>]" >&2; exit 2; }
+usage() { echo "usage: $0 <version> --tap <tap-checkout-dir>" >&2; exit 2; }
 
 VERSION="${1:-}"; [ -n "$VERSION" ] || usage
 shift || true
@@ -27,10 +28,13 @@ while [ $# -gt 0 ]; do
     *) usage ;;
   esac
 done
+[ -n "$TAP_DIR" ] || usage
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC_CASK="$ROOT/Casks/claude-light.rb"
-[ -f "$SRC_CASK" ] || { echo "source cask not found: $SRC_CASK" >&2; exit 1; }
+TAP_CASK="$TAP_DIR/Casks/claude-light.rb"
+[ -f "$SRC_CASK" ] || { echo "template cask not found: $SRC_CASK" >&2; exit 1; }
+[ -d "$TAP_DIR/Casks" ] || { echo "not a tap checkout (no Casks/): $TAP_DIR" >&2; exit 1; }
 
 TAG="v$VERSION"
 tmp="$(mktemp -d)"
@@ -48,37 +52,19 @@ if [ "$published" != "$actual" ]; then
 fi
 echo "✓ sha256 verified: $actual"
 
-# Rewrite the `version` and `sha256` string literals in a cask, in place.
-bump() {
-  local f="$1"
-  [ -f "$f" ] || { echo "cask not found: $f" >&2; exit 1; }
-  python3 - "$f" "$VERSION" "$actual" <<'PY'
-import re, sys
-path, version, sha = sys.argv[1:4]
-s = open(path).read()
-s, nv = re.subn(r'(\n[ \t]*version[ \t]+)"[^"]*"', r'\g<1>"%s"' % version, s, count=1)
-s, ns = re.subn(r'(\n[ \t]*sha256[ \t]+)"[^"]*"', r'\g<1>"%s"' % sha, s, count=1)
-if nv != 1 or ns != 1:
-    sys.exit("could not rewrite version/sha256 in %s (version hits=%d sha256 hits=%d)" % (path, nv, ns))
-open(path, "w").write(s)
-PY
-  echo "✓ bumped ${f#"$ROOT"/}"
-}
+cp "$SRC_CASK" "$TAP_CASK"
+bash "$ROOT/scripts/render-cask.sh" "$TAP_CASK" "$VERSION" "$actual"
+echo "✓ rendered ${TAP_CASK}"
 
-bump "$SRC_CASK"
-[ -n "$TAP_DIR" ] && bump "$TAP_DIR/Casks/claude-light.rb"
-
-# Optional lint if brew is available (the tap's CI enforces this).
+# Optional lint if brew is available (the tap's CI enforces this on PRs).
 if command -v brew >/dev/null 2>&1; then
-  if brew style "$SRC_CASK" >/dev/null 2>&1; then
+  if brew style "$TAP_CASK" >/dev/null 2>&1; then
     echo "✓ brew style clean"
   else
-    echo "⚠ brew style reported issues — run: brew style $SRC_CASK"
+    echo "⚠ brew style reported issues — run: brew style $TAP_CASK"
   fi
 fi
 
 echo
-echo "Done — files edited (nothing committed). Next:"
-echo "  cd \"$ROOT\" && git checkout -b chore/cask-$VERSION && git commit -am \"chore: bump cask to $VERSION\" && git push -u origin chore/cask-$VERSION"
-echo "  gh pr create --base main --title \"chore: bump cask to $VERSION\""
-[ -n "$TAP_DIR" ] && echo "  # repeat the branch/commit/PR in the tap: $TAP_DIR"
+echo "Done — tap cask rendered (nothing committed). Next, in $TAP_DIR:"
+echo "  git commit -am \"chore: claude-light $VERSION\" && git push origin main"
