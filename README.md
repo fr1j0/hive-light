@@ -41,8 +41,8 @@ Click the icon for the full picture:
 
 - A one-line summary header, such as `1 needs you · 2 working`.
 - Every live session, sorted by urgency (needs-you first), each with a colored status dot, its project name, what it's doing, and how long ago it last changed.
-- Toggles for showing a session's parallel subagents, launching at login, and needs-you notifications.
-- One-click install or removal of the Claude Code hooks, and quit.
+- A Settings submenu: show subagents, launch at login, needs-you notifications, and one-click install or removal of the Claude Code hooks.
+- Quit, and the running version.
 
 ## Features
 
