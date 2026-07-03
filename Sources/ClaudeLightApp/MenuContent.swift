@@ -19,16 +19,27 @@ struct MenuContent: View {
                 Divider()
             }
             ForEach(watcher.sessions, id: \.sessionID) { session in
-                Button {
-                    TerminalFocuser.focus(session)
-                } label: {
+                if session.status == .done {
+                    // Finished session lingering (#54): non-interactive — the
+                    // terminal may already be gone.
                     Label {
-                        Text(rowText(for: session))
+                        Text(doneRowText(for: session))
+                            .foregroundStyle(.secondary)
                     } icon: {
-                        if session.status == .error {
-                            Image(nsImage: Self.warningTriangle())
-                        } else {
-                            Image(nsImage: Self.dot(color(for: session.status)))
+                        Image(nsImage: Self.doneCheckmark)
+                    }
+                } else {
+                    Button {
+                        TerminalFocuser.focus(session)
+                    } label: {
+                        Label {
+                            Text(rowText(for: session))
+                        } icon: {
+                            if session.status == .error {
+                                Image(nsImage: Self.warningTriangle())
+                            } else {
+                                Image(nsImage: Self.dot(color(for: session.status)))
+                            }
                         }
                     }
                 }
@@ -147,6 +158,21 @@ struct MenuContent: View {
         return img
     }()
 
+    /// Grey `checkmark.circle.fill` for done rows, non-template like the dots.
+    private static let doneCheckmark: NSImage = {
+        let cfg = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
+        let base = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "done")?
+            .withSymbolConfiguration(cfg) ?? NSImage()
+        let out = NSImage(size: base.size)
+        out.lockFocus()
+        base.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1)
+        NSColor.secondaryLabelColor.set()
+        NSRect(origin: .zero, size: base.size).fill(using: .sourceAtop)
+        out.unlockFocus()
+        out.isTemplate = false
+        return out
+    }()
+
     /// Filled colored dot as a NON-template image (menus coerce templates to mono).
     private static func dot(_ color: NSColor) -> NSImage {
         let d: CGFloat = 9
@@ -189,6 +215,11 @@ struct MenuContent: View {
             return "\(displayName(for: session)) — API error: \(reason)"
         }
         return "\(displayName(for: session)) — \(friendlyStatusLabel(for: session.status))"
+    }
+
+    private func doneRowText(for session: Session) -> String {
+        let age = relativeTime(secondsAgo: Date().timeIntervalSince(session.updatedAt))
+        return "\(displayName(for: session)) — done · \(age) ago"
     }
 
     private func color(for status: SessionStatus) -> NSColor {
