@@ -133,7 +133,12 @@ final class SessionWatcher: ObservableObject {
 
     func reload() {
         let all = (try? store.loadAll()) ?? []
-        var live = liveSessions(all, now: Date())
+        let now = Date()
+        var live = liveSessions(all, now: now)
+        // Done tombstones past their linger window: remove the file and the row.
+        let expired = Set(expiredDoneSessions(live, now: now).map(\.sessionID))
+        for id in expired { try? store.delete(sessionID: id) }
+        live.removeAll { expired.contains($0.sessionID) }
         var reasons: [String: String] = [:]
         var subagentMap: [String: SubagentList] = [:]
         var scannedTranscripts: Set<String> = []
@@ -177,9 +182,12 @@ final class SessionWatcher: ObservableObject {
         self.sessions = sorted
         self.errorReasons = reasons
         self.subagentsBySession = subagentMap
-        let state = iconState(for: sorted)
+        // Done rows are display-only: the light and header behave as if the
+        // session were gone (#54).
+        let active = sorted.filter { $0.status != .done }
+        let state = iconState(for: active)
         self.icon = state
-        self.summary = summaryText(for: statusCounts(for: sorted))
+        self.summary = summaryText(for: statusCounts(for: active))
         updateClock(animating: state.isAnimating)
     }
 

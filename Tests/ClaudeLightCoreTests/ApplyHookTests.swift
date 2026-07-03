@@ -27,11 +27,19 @@ final class ApplyHookTests: XCTestCase {
         XCTAssertEqual(try store.loadAll().count, 0)
     }
 
-    func test_deleteAction_removesSession() throws {
+    func test_sessionEnd_writesDoneTombstone_preservingTerminalIdentity() throws {
         let store = tempStore()
-        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil), to: store, now: now)
-        try applyHook(HookPayload(sessionID: "s1", hookEventName: "SessionEnd", cwd: nil, message: nil), to: store, now: now)
-        XCTAssertEqual(try store.loadAll().count, 0)
+        let terminal = TerminalContext(termProgram: "WarpTerminal", tty: "ttys001",
+                                       termSessionId: nil, focusURL: "warp://session/abc")
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now, terminal: terminal)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "SessionEnd", cwd: "/x/p", message: nil),
+                      to: store, now: now.addingTimeInterval(60))
+        let s = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(s.status, .done)
+        XCTAssertEqual(s.updatedAt, now.addingTimeInterval(60))
+        XCTAssertEqual(s.termProgram, "WarpTerminal")
+        XCTAssertEqual(s.focusURL, "warp://session/abc")
     }
 
     func test_missingCwd_projectIsUnknown() throws {
