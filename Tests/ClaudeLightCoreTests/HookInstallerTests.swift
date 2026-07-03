@@ -160,6 +160,49 @@ final class HookInstallerTests: XCTestCase {
         XCTAssertEqual((out["hooks"] as? [String])?.count, 3)
     }
 
+    // MARK: – Unparseable settings must never be overwritten (#40)
+
+    private func tempSettingsURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("settings-\(UUID().uuidString).json")
+    }
+
+    func test_install_throwsAndPreservesFile_whenSettingsUnparseable() throws {
+        let url = tempSettingsURL()
+        let original = Data(#"{"model": "opus""#.utf8)   // truncated file → invalid JSON
+        try original.write(to: url)
+        let installer = HookInstaller(settingsURL: url, command: cmd)
+        XCTAssertThrowsError(try installer.install()) { error in
+            XCTAssertTrue(error is HookInstallerError)
+        }
+        XCTAssertEqual(try Data(contentsOf: url), original, "file must be left byte-for-byte untouched")
+    }
+
+    func test_install_throwsAndPreservesFile_whenTopLevelIsNotAnObject() throws {
+        let url = tempSettingsURL()
+        let original = Data(#"["not", "an", "object"]"#.utf8)
+        try original.write(to: url)
+        let installer = HookInstaller(settingsURL: url, command: cmd)
+        XCTAssertThrowsError(try installer.install())
+        XCTAssertEqual(try Data(contentsOf: url), original, "file must be left byte-for-byte untouched")
+    }
+
+    func test_uninstall_throwsAndPreservesFile_whenSettingsUnparseable() throws {
+        let url = tempSettingsURL()
+        let original = Data(#"{"model": "opus""#.utf8)   // truncated file → invalid JSON
+        try original.write(to: url)
+        let installer = HookInstaller(settingsURL: url, command: cmd)
+        XCTAssertThrowsError(try installer.uninstall())
+        XCTAssertEqual(try Data(contentsOf: url), original, "file must be left byte-for-byte untouched")
+    }
+
+    func test_install_stillWorks_whenFileIsMissing() throws {
+        let url = tempSettingsURL()
+        let installer = HookInstaller(settingsURL: url, command: cmd)
+        try installer.install()
+        XCTAssertTrue(installer.isInstalled())
+    }
+
     // MARK: – hooksAreInstalled pure helper
 
     func test_hooksAreInstalled_falseOnEmpty() {

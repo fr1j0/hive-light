@@ -79,6 +79,15 @@ struct MenuContent: View {
             Label(watcher.hooksInstalled ? "Remove Claude Code hooks" : "Install Claude Code hooks",
                   systemImage: "link")
         }
+        if let hookError = watcher.hookActionError {
+            Label {
+                Text(hookError)
+                    .font(.system(size: 11))
+            } icon: {
+                Image(nsImage: Self.warningTriangle())
+            }
+            .disabled(true)
+        }
         Button {
             NSApplication.shared.terminate(nil)
         } label: {
