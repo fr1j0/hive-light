@@ -196,6 +196,7 @@ struct MenuContent: View {
         case .waiting, .attention, .handoff, .error: return Self.red
         case .running: return Self.orange
         case .idle: return Self.green
+        case .done: return .secondaryLabelColor
         }
     }
 

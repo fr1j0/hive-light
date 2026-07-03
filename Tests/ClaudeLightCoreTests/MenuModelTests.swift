@@ -81,4 +81,22 @@ extension MenuModelTests {
         let order = sortedForMenu(input).map { "\($0.status.rawValue):\($0.project)" }
         XCTAssertEqual(order, ["waiting:w", "handoff:h", "running:r", "idle:z"])
     }
+
+    func test_sortedForMenu_ranksDoneLast() {
+        func s(_ id: String, _ status: SessionStatus) -> Session {
+            Session(sessionID: id, status: status, project: id, cwd: "/p",
+                    updatedAt: Date(timeIntervalSince1970: 1_000_000))
+        }
+        let sorted = sortedForMenu([s("a", .done), s("b", .idle), s("c", .running)])
+        XCTAssertEqual(sorted.map(\.sessionID), ["c", "b", "a"])
+    }
+
+    func test_statusCounts_ignoresDone() {
+        func s(_ status: SessionStatus) -> Session {
+            Session(sessionID: UUID().uuidString, status: status, project: "p", cwd: "/p",
+                    updatedAt: Date(timeIntervalSince1970: 1_000_000))
+        }
+        let counts = statusCounts(for: [s(.done), s(.running)])
+        XCTAssertEqual(counts, StatusCounts(needYou: 0, working: 1, idle: 0, error: 0))
+    }
 }

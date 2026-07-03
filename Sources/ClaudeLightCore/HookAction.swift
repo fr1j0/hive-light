@@ -2,7 +2,6 @@ import Foundation
 
 public enum HookAction: Equatable, Sendable {
     case set(SessionStatus)
-    case delete
     case ignore
 }
 
@@ -26,7 +25,9 @@ public func action(for payload: HookPayload, transcriptJSONL: String? = nil) -> 
     case "Notification":
         return .set(.waiting)
     case "SessionEnd":
-        return .delete
+        // Tombstone, not delete: the row lingers briefly as "done" (#54).
+        // The app removes the file after doneLingerWindow.
+        return .set(.done)
     default:
         return .ignore
     }
