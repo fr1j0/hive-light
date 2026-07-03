@@ -120,3 +120,33 @@ jobs:
           files: |
             dist/claude-light.zip
             dist/claude-light.zip.sha256
+
+      # Mirrors the rendered cask to the tap so `brew upgrade` serves this
+      # release immediately. Skips gracefully when the secret is absent
+      # (forks, PAT expiry) — the release itself is already published; the
+      # manual fallback is: scripts/bump-cask.sh <version> --tap <checkout>.
+      - name: Mirror cask to Homebrew tap
+        env:
+          TAP_PUSH_TOKEN: ${{ secrets.TAP_PUSH_TOKEN }}
+        run: |
+          if [ -z "$TAP_PUSH_TOKEN" ]; then
+            echo "::notice::TAP_PUSH_TOKEN secret not set — skipping tap mirror"
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA="$(awk '{print $1}' dist/claude-light.zip.sha256)"
+          TAP_DIR="$RUNNER_TEMP/tap"
+          git clone --depth 1 \
+            "https://x-access-token:${TAP_PUSH_TOKEN}@github.com/fr1j0/homebrew-claude-light.git" \
+            "$TAP_DIR"
+          cp Casks/claude-light.rb "$TAP_DIR/Casks/claude-light.rb"
+          bash scripts/render-cask.sh "$TAP_DIR/Casks/claude-light.rb" "$VERSION" "$SHA"
+          cd "$TAP_DIR"
+          if git diff --quiet; then
+            echo "tap already up to date for $VERSION"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -am "chore: claude-light $VERSION"
+          git push origin main
