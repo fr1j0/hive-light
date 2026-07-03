@@ -60,41 +60,49 @@ struct MenuContent: View {
             }
         }
         Divider()
-        // A Button (not a Toggle) so the menu doesn't reserve a checkmark "state"
+        // One Settings ▸ submenu keeps the housekeeping out of the session list (#49).
+        // Buttons (not Toggles) so the menu doesn't reserve a checkmark "state"
         // column — that column is what pushes every icon/dot right. We show the
         // on/off state with a checkbox glyph in the same icon column as the others.
-        Button {
-            watcher.showSubagents.toggle()
-        } label: {
-            Label("Show subagents",
-                  systemImage: watcher.showSubagents ? "checkmark.square.fill" : "square")
-        }
-        if watcher.launchAtLoginAvailable {
+        Menu {
             Button {
-                watcher.toggleLaunchAtLogin()
+                watcher.showSubagents.toggle()
             } label: {
-                Label("Launch at login",
-                      systemImage: watcher.launchAtLoginEnabled ? "checkmark.square.fill" : "square")
+                Label("Show subagents",
+                      systemImage: watcher.showSubagents ? "checkmark.square.fill" : "square")
             }
-        }
-        if watcher.notificationsAvailable {
+            if watcher.launchAtLoginAvailable {
+                Button {
+                    watcher.toggleLaunchAtLogin()
+                } label: {
+                    Label("Launch at login",
+                          systemImage: watcher.launchAtLoginEnabled ? "checkmark.square.fill" : "square")
+                }
+            }
+            if watcher.notificationsAvailable {
+                Button {
+                    watcher.notifyOnNeedsYou.toggle()
+                } label: {
+                    Label("Notify when a session needs you",
+                          systemImage: watcher.notifyOnNeedsYou ? "checkmark.square.fill" : "square")
+                }
+            }
+            Divider()
             Button {
-                watcher.notifyOnNeedsYou.toggle()
+                if watcher.hooksInstalled {
+                    watcher.removeHooks()
+                } else {
+                    watcher.installHooks()
+                }
             } label: {
-                Label("Notify when a session needs you",
-                      systemImage: watcher.notifyOnNeedsYou ? "checkmark.square.fill" : "square")
-            }
-        }
-        Button {
-            if watcher.hooksInstalled {
-                watcher.removeHooks()
-            } else {
-                watcher.installHooks()
+                Label(watcher.hooksInstalled ? "Remove Claude Code hooks" : "Install Claude Code hooks",
+                      systemImage: "link")
             }
         } label: {
-            Label(watcher.hooksInstalled ? "Remove Claude Code hooks" : "Install Claude Code hooks",
-                  systemImage: "link")
+            Label("Settings", systemImage: "gearshape")
         }
+        // The hook-error line stays top-level so a failed install is visible on
+        // the next open without diving into the submenu.
         if let hookError = watcher.hookActionError {
             Label {
                 Text(hookError)
