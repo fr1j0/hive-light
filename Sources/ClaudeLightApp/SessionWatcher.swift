@@ -9,6 +9,8 @@ final class SessionWatcher: ObservableObject {
     @Published private(set) var sessions: [Session] = []
     @Published var hooksInstalled: Bool = false
     @Published private(set) var errorReasons: [String: String] = [:]
+    /// Why the last install/remove-hooks click failed; nil after a success.
+    @Published private(set) var hookActionError: String? = nil
     @Published private(set) var icon: IconState = IconState(red: .off, orange: .off, green: .off)
     @Published private(set) var summary: String? = nil
     @Published private(set) var animationPhase: Double = 0
@@ -54,13 +56,30 @@ final class SessionWatcher: ObservableObject {
     }
 
     func installHooks() {
-        try? installer.install()
+        do {
+            try installer.install()
+            hookActionError = nil
+        } catch {
+            hookActionError = Self.hookActionErrorMessage(for: error)
+        }
         hooksInstalled = installer.isInstalled()
     }
 
     func removeHooks() {
-        try? installer.uninstall()
+        do {
+            try installer.uninstall()
+            hookActionError = nil
+        } catch {
+            hookActionError = Self.hookActionErrorMessage(for: error)
+        }
         hooksInstalled = installer.isInstalled()
+    }
+
+    private static func hookActionErrorMessage(for error: Error) -> String {
+        if case HookInstallerError.unparseableSettings = error {
+            return "settings.json couldn't be parsed — fix it and retry"
+        }
+        return "couldn't update settings.json"
     }
 
     func reload() {

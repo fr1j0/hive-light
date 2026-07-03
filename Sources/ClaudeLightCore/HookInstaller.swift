@@ -93,6 +93,13 @@ public func hooksAreInstalled(in root: [String: Any], command: String) -> Bool {
     return false
 }
 
+/// The settings file exists but is not a parseable JSON object. Installing or
+/// uninstalling would rewrite the file from scratch and destroy the user's
+/// settings, so both refuse instead.
+public enum HookInstallerError: Error, Equatable {
+    case unparseableSettings
+}
+
 public struct HookInstaller {
     public let settingsURL: URL
     public let command: String
@@ -102,11 +109,14 @@ public struct HookInstaller {
         self.command = command
     }
 
+    /// A missing file is a fresh start ([:]); an existing file that can't be read
+    /// or parsed as a JSON object throws — proceeding would rewrite the user's
+    /// settings from scratch (#40).
     private func loadRoot() throws -> [String: Any] {
-        guard FileManager.default.fileExists(atPath: settingsURL.path),
-              let data = try? Data(contentsOf: settingsURL),
+        guard FileManager.default.fileExists(atPath: settingsURL.path) else { return [:] }
+        guard let data = try? Data(contentsOf: settingsURL),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return [:] }
+        else { throw HookInstallerError.unparseableSettings }
         return obj
     }
 
