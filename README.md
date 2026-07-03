@@ -41,6 +41,7 @@ Click the icon for the full picture:
 
 - A one-line summary header, such as `1 needs you · 2 working`.
 - Every live session, sorted by urgency (needs-you first), each with a colored status dot, its project name, what it's doing, and how long ago it last changed.
+- Toggles for showing a session's parallel subagents, launching at login, and needs-you notifications.
 - One-click install or removal of the Claude Code hooks, and quit.
 
 ## Features
@@ -49,6 +50,8 @@ Click the icon for the full picture:
 - Aggregate traffic light across any number of concurrent sessions.
 - A distinct, chunky traffic-light icon that adapts to light and dark menu bars.
 - Live updates via filesystem events — the display reacts within a fraction of a second.
+- Opt-in native notification when a session flips to needs-you — click it to jump to that terminal.
+- Launch-at-login toggle, so the light is always on duty.
 - No polling, no network, no telemetry.
 - Zero configuration beyond a one-click hook install.
 
