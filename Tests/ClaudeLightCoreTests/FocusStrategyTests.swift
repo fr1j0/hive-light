@@ -24,9 +24,29 @@ final class FocusStrategyTests: XCTestCase {
                        .activateApp(bundleID: "com.googlecode.iterm2"))
     }
 
-    func test_warp_activatesApp_neverPreciseTab() {
+    func test_warp_withoutFocusURL_activatesApp() {
         XCTAssertEqual(focusStrategy(termProgram: "WarpTerminal", tty: "ttys008"),
                        .activateApp(bundleID: "dev.warp.Warp-Stable"))
+    }
+
+    // MARK: – Warp deep link (#62)
+
+    func test_warp_withFocusURL_opensDeepLink() {
+        XCTAssertEqual(focusStrategy(termProgram: "WarpTerminal", tty: nil,
+                                     focusURL: "warp://session/abc123"),
+                       .openURL(url: "warp://session/abc123"))
+    }
+
+    func test_warp_withNonWarpFocusURL_fallsBackToActivate() {
+        XCTAssertEqual(focusStrategy(termProgram: "WarpTerminal", tty: nil,
+                                     focusURL: "https://evil.example/x"),
+                       .activateApp(bundleID: "dev.warp.Warp-Stable"))
+    }
+
+    func test_otherTerminals_ignoreFocusURL() {
+        XCTAssertEqual(focusStrategy(termProgram: "iTerm.app", tty: "ttys003",
+                                     focusURL: "warp://session/abc123"),
+                       .iterm(tty: "ttys003"))
     }
 
     func test_vscode_activatesApp() {
