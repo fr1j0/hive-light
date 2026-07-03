@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/traffic-light.svg" alt="Claude Light" height="150">
+  <img src="assets/app-icon.svg" alt="Claude Light" height="150">
 </p>
 
 <h1 align="center">Claude Light</h1>
