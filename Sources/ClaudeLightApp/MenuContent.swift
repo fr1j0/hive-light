@@ -69,6 +69,14 @@ struct MenuContent: View {
             Label("Show subagents",
                   systemImage: watcher.showSubagents ? "checkmark.square.fill" : "square")
         }
+        if watcher.launchAtLoginAvailable {
+            Button {
+                watcher.toggleLaunchAtLogin()
+            } label: {
+                Label("Launch at login",
+                      systemImage: watcher.launchAtLoginEnabled ? "checkmark.square.fill" : "square")
+            }
+        }
         Button {
             if watcher.hooksInstalled {
                 watcher.removeHooks()

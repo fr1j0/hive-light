@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import CoreServices
 import AppKit
+import ServiceManagement
 import ClaudeLightCore
 
 @MainActor
@@ -23,6 +24,10 @@ final class SessionWatcher: ObservableObject {
             reload()
         }
     }
+    @Published private(set) var launchAtLoginEnabled: Bool = false
+
+    /// SMAppService needs a real .app bundle; unbundled dev builds hide the row.
+    let launchAtLoginAvailable = Bundle.main.bundleIdentifier != nil
 
     private static let showSubagentsKey = "showSubagents"
     private let subagentCache = FileMemoCache<SubagentList>()
@@ -45,6 +50,7 @@ final class SessionWatcher: ObservableObject {
         guard !started else { return }
         started = true
         hooksInstalled = installer.isInstalled()
+        refreshLaunchAtLogin()
         updateAppearance()
         observeAppearance()
         try? FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
@@ -55,9 +61,27 @@ final class SessionWatcher: ObservableObject {
             guard let self else { return }
             Task { @MainActor in
                 self.store.prune(now: Date())
+                self.refreshLaunchAtLogin()   // tracks changes made in System Settings
                 self.reload()
             }
         }
+    }
+
+    func toggleLaunchAtLogin() {
+        guard launchAtLoginAvailable else { return }
+        // Failures (e.g. user denied in System Settings) surface via the re-read:
+        // the checkbox simply stays where the system says it is.
+        if SMAppService.mainApp.status == .enabled {
+            try? SMAppService.mainApp.unregister()
+        } else {
+            try? SMAppService.mainApp.register()
+        }
+        refreshLaunchAtLogin()
+    }
+
+    private func refreshLaunchAtLogin() {
+        guard launchAtLoginAvailable else { return }
+        launchAtLoginEnabled = SMAppService.mainApp.status == .enabled
     }
 
     func installHooks() {
