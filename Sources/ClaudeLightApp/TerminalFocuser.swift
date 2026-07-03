@@ -9,9 +9,13 @@ import ClaudeLightCore
 /// activation, which needs no permission. Unknown terminals are a no-op. Never throws.
 enum TerminalFocuser {
     static func focus(_ session: Session) {
-        switch focusStrategy(termProgram: session.termProgram, tty: session.tty) {
+        switch focusStrategy(termProgram: session.termProgram, tty: session.tty,
+                             focusURL: session.focusURL) {
         case .none:
             return
+        case .openURL(let url):
+            // Warp's warp://session/<id> deep link — permission-free precise focus.
+            if let u = URL(string: url) { NSWorkspace.shared.open(u) }
         case .activateApp(let bundleID):
             activate(bundleID: bundleID)
         case .terminalApp(let tty):

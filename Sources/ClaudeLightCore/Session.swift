@@ -16,14 +16,16 @@ public struct Session: Codable, Sendable, Equatable {
     public var cwd: String
     public var updatedAt: Date
     public var transcriptPath: String?
-    // Hosting-terminal identity, for focusing the session on click (#22).
+    // Hosting-terminal identity, for focusing the session on click (#22, #62).
     public var termProgram: String?
     public var tty: String?
     public var termSessionId: String?
+    public var focusURL: String?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
-                termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil) {
+                termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
+                focusURL: String? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -33,6 +35,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.termProgram = termProgram
         self.tty = tty
         self.termSessionId = termSessionId
+        self.focusURL = focusURL
     }
 
     enum CodingKeys: String, CodingKey {
@@ -45,6 +48,7 @@ public struct Session: Codable, Sendable, Equatable {
         case termProgram = "term_program"
         case tty
         case termSessionId = "term_session_id"
+        case focusURL = "focus_url"
     }
 }
 

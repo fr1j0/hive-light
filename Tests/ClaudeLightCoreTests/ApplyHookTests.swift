@@ -92,6 +92,19 @@ final class ApplyHookTests: XCTestCase {
         XCTAssertEqual(s.termSessionId, "T1")
     }
 
+    // MARK: – Warp focus URL persisted and preserved-first (#62)
+
+    func test_applyHook_persistsAndPreservesFocusURL() throws {
+        let store = tempStore()
+        let first = HookPayload(sessionID: "s1", hookEventName: "SessionStart", cwd: "/x/p", message: nil)
+        try applyHook(first, to: store, now: now,
+                      terminal: TerminalContext(termProgram: "WarpTerminal", tty: nil,
+                                                termSessionId: nil, focusURL: "warp://session/abc"))
+        let later = HookPayload(sessionID: "s1", hookEventName: "PreToolUse", cwd: "/x/p", message: nil)
+        try applyHook(later, to: store, now: now.addingTimeInterval(5), terminal: nil)
+        XCTAssertEqual(store.load(sessionID: "s1")?.focusURL, "warp://session/abc")
+    }
+
     func test_applyHook_persistsTranscriptPath() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = SessionStore(directory: dir)

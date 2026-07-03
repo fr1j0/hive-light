@@ -21,7 +21,8 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             transcriptPath: payload.transcriptPath,
             termProgram: existing?.termProgram ?? terminal?.termProgram,
             tty: existing?.tty ?? terminal?.tty,
-            termSessionId: existing?.termSessionId ?? terminal?.termSessionId
+            termSessionId: existing?.termSessionId ?? terminal?.termSessionId,
+            focusURL: existing?.focusURL ?? terminal?.focusURL
         )
         try store.write(session)
     }

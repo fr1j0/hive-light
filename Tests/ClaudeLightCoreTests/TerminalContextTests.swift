@@ -28,5 +28,23 @@ final class TerminalContextTests: XCTestCase {
         let ctx = TerminalContext(environment: [:], tty: nil)
         XCTAssertNil(ctx.termProgram)
         XCTAssertNil(ctx.termSessionId)
+        XCTAssertNil(ctx.focusURL)
+    }
+
+    // MARK: – WARP_FOCUS_URL (#62)
+
+    func test_capturesWarpFocusURL() {
+        let ctx = TerminalContext(environment: [
+            "TERM_PROGRAM": "WarpTerminal",
+            "WARP_FOCUS_URL": "warp://session/c175d2a4cd8c4408b05a96bf615530d2",
+        ], tty: nil)
+        XCTAssertEqual(ctx.focusURL, "warp://session/c175d2a4cd8c4408b05a96bf615530d2")
+    }
+
+    func test_rejectsNonWarpFocusURL() {
+        let https = TerminalContext(environment: ["WARP_FOCUS_URL": "https://evil.example/x"], tty: nil)
+        XCTAssertNil(https.focusURL, "only warp:// URLs may be stored — the value is opened on click")
+        let blank = TerminalContext(environment: ["WARP_FOCUS_URL": "  "], tty: nil)
+        XCTAssertNil(blank.focusURL)
     }
 }
