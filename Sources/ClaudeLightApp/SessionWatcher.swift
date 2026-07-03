@@ -29,7 +29,21 @@ final class SessionWatcher: ObservableObject {
     /// SMAppService needs a real .app bundle; unbundled dev builds hide the row.
     let launchAtLoginAvailable = Bundle.main.bundleIdentifier != nil
 
+    /// Opt-in: post a native notification when a session flips to needs-you.
+    @Published var notifyOnNeedsYou: Bool {
+        didSet {
+            UserDefaults.standard.set(notifyOnNeedsYou, forKey: Self.notifyKey)
+            if notifyOnNeedsYou { notifier.requestAuthorization() }
+        }
+    }
+    var notificationsAvailable: Bool { SessionNotifier.available }
+
     private static let showSubagentsKey = "showSubagents"
+    private static let notifyKey = "notifyOnNeedsYou"
+    private let notifier = SessionNotifier()
+    /// Previous reload's statuses; nil until the first reload has taken a
+    /// baseline, so launching never replays already-red sessions.
+    private var lastStatuses: [String: SessionStatus]? = nil
     private let subagentCache = FileMemoCache<SubagentList>()
     private let store: SessionStore
     private let installer: HookInstaller
@@ -43,6 +57,7 @@ final class SessionWatcher: ObservableObject {
         self.store = store
         self.installer = installer
         self.showSubagents = UserDefaults.standard.bool(forKey: Self.showSubagentsKey)
+        self.notifyOnNeedsYou = UserDefaults.standard.bool(forKey: Self.notifyKey)
     }
 
     /// Call exactly once. Idempotent: subsequent calls are no-ops.
@@ -51,6 +66,11 @@ final class SessionWatcher: ObservableObject {
         started = true
         hooksInstalled = installer.isInstalled()
         refreshLaunchAtLogin()
+        notifier.activate()
+        notifier.sessionLookup = { [weak self] id in
+            self?.sessions.first { $0.sessionID == id }
+        }
+        if notifyOnNeedsYou { notifier.requestAuthorization() }
         updateAppearance()
         observeAppearance()
         try? FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
@@ -139,6 +159,19 @@ final class SessionWatcher: ObservableObject {
         }
         subagentCache.evict(keeping: scannedTranscripts)
         let sorted = sortedForMenu(live)
+        // Post-error-detection so running→error transitions count; the first
+        // reload only takes the baseline. The snapshot updates even while the
+        // toggle is off, so enabling it never replays old transitions.
+        if let previous = lastStatuses, notifyOnNeedsYou {
+            for session in newlyNeedingYou(previous: previous, current: sorted) {
+                let body = session.status == .error
+                    ? "API error: \(reasons[session.sessionID] ?? "api error")"
+                    : friendlyStatusLabel(for: session.status)
+                notifier.post(project: session.project, body: body, sessionID: session.sessionID)
+            }
+        }
+        lastStatuses = Dictionary(sorted.map { ($0.sessionID, $0.status) },
+                                  uniquingKeysWith: { a, _ in a })
         self.sessions = sorted
         self.errorReasons = reasons
         self.subagentsBySession = subagentMap

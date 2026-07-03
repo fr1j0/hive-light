@@ -77,6 +77,14 @@ struct MenuContent: View {
                       systemImage: watcher.launchAtLoginEnabled ? "checkmark.square.fill" : "square")
             }
         }
+        if watcher.notificationsAvailable {
+            Button {
+                watcher.notifyOnNeedsYou.toggle()
+            } label: {
+                Label("Notify when a session needs you",
+                      systemImage: watcher.notifyOnNeedsYou ? "checkmark.square.fill" : "square")
+            }
+        }
         Button {
             if watcher.hooksInstalled {
                 watcher.removeHooks()
@@ -172,7 +180,7 @@ struct MenuContent: View {
             let reason = watcher.errorReasons[session.sessionID] ?? "api error"
             return "\(session.project) — API error: \(reason)"
         }
-        return "\(session.project) — \(friendlyLabel(for: session.status))"
+        return "\(session.project) — \(friendlyStatusLabel(for: session.status))"
     }
 
     private func color(for status: SessionStatus) -> NSColor {
@@ -180,17 +188,6 @@ struct MenuContent: View {
         case .waiting, .attention, .handoff, .error: return Self.red
         case .running: return Self.orange
         case .idle: return Self.green
-        }
-    }
-
-    private func friendlyLabel(for status: SessionStatus) -> String {
-        switch status {
-        case .running: return "running"
-        case .waiting: return "waiting for permission"
-        case .attention: return "awaiting your reply"
-        case .handoff: return "review requested"
-        case .idle: return "idle"
-        case .error: return "API error"
         }
     }
 
