@@ -9,6 +9,9 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
         try store.delete(sessionID: payload.sessionID)
     case .set(let status):
         let cwd = payload.cwd ?? ""
+        // Terminal identity never changes mid-session: whatever was captured
+        // first wins, so later events can skip the expensive TTY resolution (#42).
+        let existing = store.load(sessionID: payload.sessionID)
         let session = Session(
             sessionID: payload.sessionID,
             status: status,
@@ -16,9 +19,9 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             cwd: cwd,
             updatedAt: now,
             transcriptPath: payload.transcriptPath,
-            termProgram: terminal?.termProgram,
-            tty: terminal?.tty,
-            termSessionId: terminal?.termSessionId
+            termProgram: existing?.termProgram ?? terminal?.termProgram,
+            tty: existing?.tty ?? terminal?.tty,
+            termSessionId: existing?.termSessionId ?? terminal?.termSessionId
         )
         try store.write(session)
     }

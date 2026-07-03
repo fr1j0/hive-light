@@ -25,6 +25,7 @@ final class SessionWatcher: ObservableObject {
     }
 
     private static let showSubagentsKey = "showSubagents"
+    private let subagentCache = FileMemoCache<SubagentList>()
     private let store: SessionStore
     private let installer: HookInstaller
     private var stream: FSEventStreamRef?
@@ -47,11 +48,15 @@ final class SessionWatcher: ObservableObject {
         updateAppearance()
         observeAppearance()
         try? FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
+        store.prune(now: Date())
         reload()
         startFSEvents()
         staleTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task { @MainActor in self.reload() }
+            Task { @MainActor in
+                self.store.prune(now: Date())
+                self.reload()
+            }
         }
     }
 
@@ -87,6 +92,7 @@ final class SessionWatcher: ObservableObject {
         var live = liveSessions(all, now: Date())
         var reasons: [String: String] = [:]
         var subagentMap: [String: SubagentList] = [:]
+        var scannedTranscripts: Set<String> = []
         for i in live.indices where live[i].status == .running {
             guard let path = live[i].transcriptPath else { continue }
             if let tail = transcriptTail(path: path),
@@ -95,11 +101,19 @@ final class SessionWatcher: ObservableObject {
                 reasons[live[i].sessionID] = reason
                 continue                                  // errored → not a running subagent host
             }
-            if showSubagents, let wide = transcriptTail(path: path, maxBytes: 4 * 1024 * 1024) {
-                let list = subagents(fromTranscript: wide)
+            if showSubagents, let stamp = fileStamp(path: path) {
+                // The wide tail read is expensive (up to 4 MB per reload); memoize
+                // the parsed list until the transcript's (mtime, size) changes.
+                let list = subagentCache.value(for: path, stamp: stamp) { [weak self] in
+                    guard let wide = self?.transcriptTail(path: path, maxBytes: 4 * 1024 * 1024)
+                    else { return .empty }
+                    return subagents(fromTranscript: wide)
+                }
                 if !list.isEmpty { subagentMap[live[i].sessionID] = list }
+                scannedTranscripts.insert(path)
             }
         }
+        subagentCache.evict(keeping: scannedTranscripts)
         let sorted = sortedForMenu(live)
         self.sessions = sorted
         self.errorReasons = reasons
@@ -108,6 +122,14 @@ final class SessionWatcher: ObservableObject {
         self.icon = state
         self.summary = summaryText(for: statusCounts(for: sorted))
         updateClock(animating: state.isAnimating)
+    }
+
+    /// The file's (mtime, size) identity, or nil if it can't be stat'ed.
+    private func fileStamp(path: String) -> FileStamp? {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+              let mtime = attrs[.modificationDate] as? Date,
+              let size = (attrs[.size] as? NSNumber)?.uint64Value else { return nil }
+        return FileStamp(mtime: mtime, size: size)
     }
 
     /// Reads the last `maxBytes` of a transcript file (whole file if smaller).
