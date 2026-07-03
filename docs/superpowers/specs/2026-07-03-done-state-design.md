@@ -66,8 +66,9 @@ observed the delete, and adds racy bookkeeping to `SessionWatcher`.
 ### Row presentation
 
 - Greyed-out (secondary) text, checkmark icon, status text
-  "done · 40s ago" using the existing relative-time formatting and the
-  existing clock timer that refreshes open menus.
+  "done · 40s ago" using the existing relative-time formatting; the age
+  refreshes when the 30 s stale timer republishes the session list, so it
+  can lag up to ~30 s in an open menu.
 - Non-interactive: no focus action and no hover affordance — the
   terminal may already be gone.
 

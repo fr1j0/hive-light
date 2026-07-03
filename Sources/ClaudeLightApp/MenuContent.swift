@@ -26,7 +26,7 @@ struct MenuContent: View {
                         Text(doneRowText(for: session))
                             .foregroundStyle(.secondary)
                     } icon: {
-                        Image(nsImage: Self.doneCheckmark)
+                        Image(nsImage: Self.doneCheckmark())
                     }
                 } else {
                     Button {
@@ -159,7 +159,8 @@ struct MenuContent: View {
     }()
 
     /// Grey `checkmark.circle.fill` for done rows, non-template like the dots.
-    private static let doneCheckmark: NSImage = {
+    /// Rebuilt per render so secondaryLabelColor tracks light/dark switches.
+    private static func doneCheckmark() -> NSImage {
         let cfg = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
         let base = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "done")?
             .withSymbolConfiguration(cfg) ?? NSImage()
@@ -171,7 +172,7 @@ struct MenuContent: View {
         out.unlockFocus()
         out.isTemplate = false
         return out
-    }()
+    }
 
     /// Filled colored dot as a NON-template image (menus coerce templates to mono).
     private static func dot(_ color: NSColor) -> NSImage {
