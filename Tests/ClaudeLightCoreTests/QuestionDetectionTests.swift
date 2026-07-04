@@ -88,4 +88,42 @@ final class QuestionDetectionTests: XCTestCase {
         let jsonl = [assistantStatementLine, assistantQuestionLine].joined(separator: "\n")
         XCTAssertEqual(lastAssistantText(transcriptJSONL: jsonl), "Which option do you prefer?")
     }
+
+    // MARK: - finalSentence
+
+    func test_finalSentence_returnsLastSentence() {
+        XCTAssertEqual(finalSentence("I did the thing. Should I also update the docs?"),
+                       "Should I also update the docs?")
+    }
+
+    func test_finalSentence_stripsCode() {
+        XCTAssertEqual(finalSentence("Run ```rm -rf tmp?``` first. Proceed?"), "Proceed?")
+    }
+
+    func test_finalSentence_singleSentence_returnsIt() {
+        XCTAssertEqual(finalSentence("Deploy to production?"), "Deploy to production?")
+    }
+
+    func test_finalSentence_empty_returnsNil() {
+        XCTAssertNil(finalSentence(""))
+        XCTAssertNil(finalSentence("```only code```"))
+    }
+
+    // MARK: - truncatedDetail
+
+    func test_truncatedDetail_shortUnchanged() {
+        XCTAssertEqual(truncatedDetail("Deploy?"), "Deploy?")
+    }
+
+    func test_truncatedDetail_capsAt140WithEllipsis() {
+        let long = String(repeating: "a", count: 200)
+        let out = truncatedDetail(long)
+        XCTAssertEqual(out.count, 140)
+        XCTAssertTrue(out.hasSuffix("…"))
+    }
+
+    func test_truncatedDetail_exactly140_unchanged() {
+        let s = String(repeating: "b", count: 140)
+        XCTAssertEqual(truncatedDetail(s), s)
+    }
 }

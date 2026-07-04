@@ -49,3 +49,31 @@ public func lastAssistantText(transcriptJSONL: String) -> String? {
     }
     return nil
 }
+
+/// The last sentence of the code-stripped prose — the question/ask itself,
+/// for notification bodies. Nil when nothing prose-like remains.
+public func finalSentence(_ text: String) -> String? {
+    let prose = strippingCode(text).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !prose.isEmpty else { return nil }
+    var sentences: [String] = []
+    var current = ""
+    for ch in prose {
+        current.append(ch)
+        if ch == "." || ch == "!" || ch == "?" {
+            sentences.append(current)
+            current = ""
+        }
+    }
+    if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        sentences.append(current)
+    }
+    let last = sentences.last?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return (last?.isEmpty ?? true) ? nil : last
+}
+
+/// Caps a notification detail at 140 characters (ellipsis-terminated when
+/// cut) so session files stay small and banners stay readable.
+public func truncatedDetail(_ text: String) -> String {
+    guard text.count > 140 else { return text }
+    return String(text.prefix(139)) + "…"
+}
