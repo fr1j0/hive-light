@@ -1,33 +1,41 @@
 import Foundation
 
 public enum HookAction: Equatable, Sendable {
-    case set(SessionStatus)
+    case set(SessionStatus, detail: String?)
     case ignore
 }
 
 public func action(for payload: HookPayload, transcriptJSONL: String? = nil) -> HookAction {
     switch payload.hookEventName {
     case "SessionStart":
-        return .set(.idle)
+        return .set(.idle, detail: nil)
     case "Stop":
         if let t = transcriptJSONL {
             // Structural signal first: an unanswered AskUserQuestion/ExitPlanMode
             // is unambiguous (#56). The text heuristics remain as fallback.
-            if hasPendingUserQuestion(transcriptJSONL: t) { return .set(.attention) }
+            if let question = pendingUserQuestionText(transcriptJSONL: t) {
+                return .set(.attention, detail: truncatedDetail(question))
+            }
             if let last = lastAssistantText(transcriptJSONL: t) {
-                if textEndsWithQuestion(last) { return .set(.attention) }
-                if textEndsWithHandoffAsk(last) { return .set(.handoff) }
+                if textEndsWithQuestion(last) {
+                    return .set(.attention, detail: finalSentence(last).map(truncatedDetail))
+                }
+                if textEndsWithHandoffAsk(last) {
+                    return .set(.handoff, detail: finalSentence(last).map(truncatedDetail))
+                }
             }
         }
-        return .set(.idle)
+        return .set(.idle, detail: nil)
     case "UserPromptSubmit", "PreToolUse":
-        return .set(.running)
+        return .set(.running, detail: nil)
     case "Notification":
-        return .set(.waiting)
+        // The payload message says what's blocked ("Claude needs your
+        // permission to use Bash") — carry it into the banner (#80).
+        return .set(.waiting, detail: payload.message.map(truncatedDetail))
     case "SessionEnd":
         // Tombstone, not delete: the row lingers briefly as "done" (#54).
         // The app removes the file after doneLingerWindow.
-        return .set(.done)
+        return .set(.done, detail: nil)
     default:
         return .ignore
     }

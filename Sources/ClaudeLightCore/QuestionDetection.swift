@@ -49,3 +49,67 @@ public func lastAssistantText(transcriptJSONL: String) -> String? {
     }
     return nil
 }
+
+/// The last sentence of the code-stripped prose — the question/ask itself,
+/// for notification bodies. Nil when nothing prose-like remains.
+public func finalSentence(_ text: String) -> String? {
+    let prose = strippingCode(text).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !prose.isEmpty else { return nil }
+    let chars = Array(prose)
+    var sentences: [String] = []
+    var current = ""
+    for (index, ch) in chars.enumerated() {
+        current.append(ch)
+        if ch == "." || ch == "!" || ch == "?" {
+            // Only a genuine sentence boundary when the next character is
+            // whitespace (or we're at the end of the text) — this keeps
+            // decimals ("2.0") from splitting, and lets consecutive
+            // terminators ("?!") stay in one fragment.
+            let nextIndex = index + 1
+            let atEnd = nextIndex >= chars.count
+            let nextIsWhitespace = !atEnd && chars[nextIndex].unicodeScalars.allSatisfy { CharacterSet.whitespacesAndNewlines.contains($0) }
+            // A "." preceded by a single lowercase-lettered character that isn't
+            // itself preceded by a letter (an isolated single-letter token,
+            // e.g. the "g" in "e.g.") reads as an abbreviation, not a sentence
+            // end. Capital single letters are excluded: they're usually option
+            // labels ("A.", "B.") which should split normally so the trailing
+            // question stays its own fragment.
+            let isAbbreviationPeriod: Bool
+            if ch == "." && index >= 1 {
+                let prevIsLowercaseLetter = chars[index - 1].unicodeScalars.allSatisfy { CharacterSet.lowercaseLetters.contains($0) }
+                let prevPrevIsLetter = index >= 2 && chars[index - 2].unicodeScalars.allSatisfy { CharacterSet.letters.contains($0) }
+                isAbbreviationPeriod = prevIsLowercaseLetter && !prevPrevIsLetter
+            } else {
+                isAbbreviationPeriod = false
+            }
+            if (atEnd || nextIsWhitespace) && !isAbbreviationPeriod {
+                sentences.append(current)
+                current = ""
+            }
+        }
+    }
+    if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        sentences.append(current)
+    }
+    // Walk back from the last fragment until one contains a letter (a
+    // fragment made purely of punctuation, e.g. a stray "!" left over from
+    // "?!", isn't a usable sentence on its own).
+    while let candidate = sentences.last?.trimmingCharacters(in: .whitespacesAndNewlines) {
+        if candidate.isEmpty {
+            sentences.removeLast()
+            continue
+        }
+        if candidate.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) {
+            return candidate
+        }
+        sentences.removeLast()
+    }
+    return nil
+}
+
+/// Caps a notification detail at 140 characters (ellipsis-terminated when
+/// cut) so session files stay small and banners stay readable.
+public func truncatedDetail(_ text: String) -> String {
+    guard text.count > 140 else { return text }
+    return String(text.prefix(139)) + "…"
+}

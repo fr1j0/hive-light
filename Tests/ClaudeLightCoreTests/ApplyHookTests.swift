@@ -123,4 +123,24 @@ final class ApplyHookTests: XCTestCase {
         let stored = try store.loadAll().first { $0.sessionID == "s1" }
         XCTAssertEqual(stored?.transcriptPath, "/Users/me/.claude/projects/p/s1.jsonl")
     }
+
+    func test_notificationDetail_isWrittenToSession() throws {
+        let store = tempStore()
+        let p = HookPayload(sessionID: "s1", hookEventName: "Notification", cwd: "/x/p",
+                            message: "Claude needs your permission to use Bash")
+        try applyHook(p, to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.detail,
+                       "Claude needs your permission to use Bash")
+    }
+
+    func test_runningWrite_clearsStaleDetail() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Notification", cwd: "/x/p",
+                                  message: "permission?"), to: store, now: now)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p",
+                                  message: nil), to: store, now: now.addingTimeInterval(1))
+        let s = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(s.status, .running)
+        XCTAssertNil(s.detail)
+    }
 }

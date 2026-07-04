@@ -88,4 +88,67 @@ final class QuestionDetectionTests: XCTestCase {
         let jsonl = [assistantStatementLine, assistantQuestionLine].joined(separator: "\n")
         XCTAssertEqual(lastAssistantText(transcriptJSONL: jsonl), "Which option do you prefer?")
     }
+
+    // MARK: - finalSentence
+
+    func test_finalSentence_returnsLastSentence() {
+        XCTAssertEqual(finalSentence("I did the thing. Should I also update the docs?"),
+                       "Should I also update the docs?")
+    }
+
+    func test_finalSentence_stripsCode() {
+        XCTAssertEqual(finalSentence("Run ```rm -rf tmp?``` first. Proceed?"), "Proceed?")
+    }
+
+    func test_finalSentence_singleSentence_returnsIt() {
+        XCTAssertEqual(finalSentence("Deploy to production?"), "Deploy to production?")
+    }
+
+    func test_finalSentence_empty_returnsNil() {
+        XCTAssertNil(finalSentence(""))
+        XCTAssertNil(finalSentence("```only code```"))
+    }
+
+    func test_finalSentence_decimalNotSplit() {
+        XCTAssertEqual(finalSentence("Should I bump to 2.0?"), "Should I bump to 2.0?")
+    }
+
+    func test_finalSentence_abbreviationNotSplit() {
+        XCTAssertEqual(finalSentence("Should I use the CLI (e.g. Bash)?"),
+                       "Should I use the CLI (e.g. Bash)?")
+    }
+
+    func test_finalSentence_consecutiveTerminators_keepFullSentence() {
+        XCTAssertEqual(finalSentence("I finished. Are you sure?!"), "Are you sure?!")
+    }
+
+    func test_finalSentence_capitalOptionLabels_splitNormally() {
+        XCTAssertEqual(finalSentence("Choose option A. Deploy now?"), "Deploy now?")
+    }
+
+    func test_finalSentence_letteredOptionsLongPrompt_keepsQuestion() {
+        let text = "A. Deploy to staging first and run the smoke tests there. "
+                 + "B. Deploy directly to production behind the feature flag. "
+                 + "Which of these two approaches should I take right now?"
+        XCTAssertEqual(finalSentence(text),
+                       "Which of these two approaches should I take right now?")
+    }
+
+    // MARK: - truncatedDetail
+
+    func test_truncatedDetail_shortUnchanged() {
+        XCTAssertEqual(truncatedDetail("Deploy?"), "Deploy?")
+    }
+
+    func test_truncatedDetail_capsAt140WithEllipsis() {
+        let long = String(repeating: "a", count: 200)
+        let out = truncatedDetail(long)
+        XCTAssertEqual(out.count, 140)
+        XCTAssertTrue(out.hasSuffix("…"))
+    }
+
+    func test_truncatedDetail_exactly140_unchanged() {
+        let s = String(repeating: "b", count: 140)
+        XCTAssertEqual(truncatedDetail(s), s)
+    }
 }

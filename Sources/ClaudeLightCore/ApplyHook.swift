@@ -5,7 +5,7 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
     switch action(for: payload, transcriptJSONL: transcriptJSONL) {
     case .ignore:
         return
-    case .set(let status):
+    case .set(let status, let detail):
         let cwd = payload.cwd ?? ""
         // Terminal identity never changes mid-session: whatever was captured
         // first wins, so later events can skip the expensive TTY resolution (#42).
@@ -20,7 +20,9 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             termProgram: existing?.termProgram ?? terminal?.termProgram,
             tty: existing?.tty ?? terminal?.tty,
             termSessionId: existing?.termSessionId ?? terminal?.termSessionId,
-            focusURL: existing?.focusURL ?? terminal?.focusURL
+            focusURL: existing?.focusURL ?? terminal?.focusURL,
+            // Belt-and-braces: the ≤140 cap holds even if a future action path forgets it.
+            detail: detail.map(truncatedDetail)
         )
         try store.write(session)
     }
