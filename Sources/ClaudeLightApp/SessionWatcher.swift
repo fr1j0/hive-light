@@ -173,7 +173,7 @@ final class SessionWatcher: ObservableObject {
             for session in newlyNeedingYou(previous: previous, current: sorted) {
                 let body = session.status == .error
                     ? "API error: \(reasons[session.sessionID] ?? "api error")"
-                    : friendlyStatusLabel(for: session.status)
+                    : (session.detail ?? friendlyStatusLabel(for: session.status))
                 notifier.post(project: session.project, body: body, sessionID: session.sessionID)
             }
         }

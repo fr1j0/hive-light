@@ -25,7 +25,7 @@ final class PendingQuestionDetectionTests: XCTestCase {
     func test_unansweredAskUserQuestion_isPending() {
         let t = [userPrompt("do the thing"),
                  toolUse("AskUserQuestion", id: "q1")].joined(separator: "\n")
-        XCTAssertTrue(hasPendingUserQuestion(transcriptJSONL: t))
+        XCTAssertNotNil(pendingUserQuestionText(transcriptJSONL: t))
     }
 
     func test_answeredAskUserQuestion_isNotPending() {
@@ -33,13 +33,13 @@ final class PendingQuestionDetectionTests: XCTestCase {
                  toolUse("AskUserQuestion", id: "q1"),
                  toolResult(id: "q1"),
                  assistantText("done")].joined(separator: "\n")
-        XCTAssertFalse(hasPendingUserQuestion(transcriptJSONL: t))
+        XCTAssertNil(pendingUserQuestionText(transcriptJSONL: t))
     }
 
     func test_unansweredExitPlanMode_isPending() {
         let t = [userPrompt("plan it"),
                  toolUse("ExitPlanMode", id: "p1")].joined(separator: "\n")
-        XCTAssertTrue(hasPendingUserQuestion(transcriptJSONL: t))
+        XCTAssertNotNil(pendingUserQuestionText(transcriptJSONL: t))
     }
 
     func test_staleQuestionBeforeNewUserPrompt_isNotPending() {
@@ -49,13 +49,13 @@ final class PendingQuestionDetectionTests: XCTestCase {
                  toolUse("AskUserQuestion", id: "q1"),
                  userPrompt("never mind, do something else"),
                  assistantText("on it")].joined(separator: "\n")
-        XCTAssertFalse(hasPendingUserQuestion(transcriptJSONL: t))
+        XCTAssertNil(pendingUserQuestionText(transcriptJSONL: t))
     }
 
     func test_otherToolsPending_areNotQuestions() {
         let t = [userPrompt("go"),
                  toolUse("Bash", id: "b1")].joined(separator: "\n")
-        XCTAssertFalse(hasPendingUserQuestion(transcriptJSONL: t))
+        XCTAssertNil(pendingUserQuestionText(transcriptJSONL: t))
     }
 
     func test_toolResultOnlyUserEntry_doesNotSupersede() {
@@ -65,12 +65,12 @@ final class PendingQuestionDetectionTests: XCTestCase {
                  toolUse("Bash", id: "b1"),
                  toolResult(id: "b1"),
                  toolUse("AskUserQuestion", id: "q1")].joined(separator: "\n")
-        XCTAssertTrue(hasPendingUserQuestion(transcriptJSONL: t))
+        XCTAssertNotNil(pendingUserQuestionText(transcriptJSONL: t))
     }
 
     func test_emptyOrGarbage_isNotPending() {
-        XCTAssertFalse(hasPendingUserQuestion(transcriptJSONL: ""))
-        XCTAssertFalse(hasPendingUserQuestion(transcriptJSONL: "not json\nstill not json"))
+        XCTAssertNil(pendingUserQuestionText(transcriptJSONL: ""))
+        XCTAssertNil(pendingUserQuestionText(transcriptJSONL: "not json\nstill not json"))
     }
 
     // MARK: – Wired into the Stop action
@@ -79,7 +79,7 @@ final class PendingQuestionDetectionTests: XCTestCase {
         let t = [userPrompt("choose"),
                  toolUse("AskUserQuestion", id: "q1")].joined(separator: "\n")
         let p = HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x", message: nil)
-        XCTAssertEqual(action(for: p, transcriptJSONL: t), .set(.attention))
+        XCTAssertEqual(action(for: p, transcriptJSONL: t), .set(.attention, detail: "question pending"))
     }
 
     func test_stopAction_answeredQuestion_fallsThroughToIdle() {
@@ -88,7 +88,7 @@ final class PendingQuestionDetectionTests: XCTestCase {
                  toolResult(id: "q1"),
                  assistantText("done, merged.")].joined(separator: "\n")
         let p = HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x", message: nil)
-        XCTAssertEqual(action(for: p, transcriptJSONL: t), .set(.idle))
+        XCTAssertEqual(action(for: p, transcriptJSONL: t), .set(.idle, detail: nil))
     }
 
     // MARK: – pendingUserQuestionText

@@ -3,12 +3,6 @@ import Foundation
 /// Tools whose unanswered call means the session is blocked on the user.
 private let blockingQuestionTools: Set<String> = ["AskUserQuestion", "ExitPlanMode"]
 
-/// True when the transcript ends with an unanswered blocking question.
-/// Thin wrapper over `pendingUserQuestionText` (same semantics).
-public func hasPendingUserQuestion(transcriptJSONL: String) -> Bool {
-    pendingUserQuestionText(transcriptJSONL: transcriptJSONL) != nil
-}
-
 /// The question text of the LAST still-unanswered blocking tool_use — an
 /// `AskUserQuestion` (its input's question text) or `ExitPlanMode` (fixed
 /// "plan ready for review") with no tool_result since the last real user

@@ -22,11 +22,15 @@ public struct Session: Codable, Sendable, Equatable {
     public var tty: String?
     public var termSessionId: String?
     public var focusURL: String?
+    /// What the session is blocked on, for notification bodies — the pending
+    /// question / ask sentence / permission message (#80). Set by the hook
+    /// only for needs-you statuses; ≤140 chars.
+    public var detail: String?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
-                focusURL: String? = nil) {
+                focusURL: String? = nil, detail: String? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -37,6 +41,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.tty = tty
         self.termSessionId = termSessionId
         self.focusURL = focusURL
+        self.detail = detail
     }
 
     enum CodingKeys: String, CodingKey {
@@ -50,6 +55,7 @@ public struct Session: Codable, Sendable, Equatable {
         case tty
         case termSessionId = "term_session_id"
         case focusURL = "focus_url"
+        case detail
     }
 }
 
