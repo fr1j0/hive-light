@@ -109,6 +109,19 @@ final class QuestionDetectionTests: XCTestCase {
         XCTAssertNil(finalSentence("```only code```"))
     }
 
+    func test_finalSentence_decimalNotSplit() {
+        XCTAssertEqual(finalSentence("Should I bump to 2.0?"), "Should I bump to 2.0?")
+    }
+
+    func test_finalSentence_abbreviationNotSplit() {
+        XCTAssertEqual(finalSentence("Should I use the CLI (e.g. Bash)?"),
+                       "Should I use the CLI (e.g. Bash)?")
+    }
+
+    func test_finalSentence_consecutiveTerminators_keepFullSentence() {
+        XCTAssertEqual(finalSentence("I finished. Are you sure?!"), "Are you sure?!")
+    }
+
     // MARK: - truncatedDetail
 
     func test_truncatedDetail_shortUnchanged() {

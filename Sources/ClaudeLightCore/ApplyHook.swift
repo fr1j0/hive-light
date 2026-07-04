@@ -21,7 +21,8 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             tty: existing?.tty ?? terminal?.tty,
             termSessionId: existing?.termSessionId ?? terminal?.termSessionId,
             focusURL: existing?.focusURL ?? terminal?.focusURL,
-            detail: detail
+            // Belt-and-braces: the ≤140 cap holds even if a future action path forgets it.
+            detail: detail.map(truncatedDetail)
         )
         try store.write(session)
     }
