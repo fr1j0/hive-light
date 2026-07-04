@@ -122,6 +122,18 @@ final class QuestionDetectionTests: XCTestCase {
         XCTAssertEqual(finalSentence("I finished. Are you sure?!"), "Are you sure?!")
     }
 
+    func test_finalSentence_capitalOptionLabels_splitNormally() {
+        XCTAssertEqual(finalSentence("Choose option A. Deploy now?"), "Deploy now?")
+    }
+
+    func test_finalSentence_letteredOptionsLongPrompt_keepsQuestion() {
+        let text = "A. Deploy to staging first and run the smoke tests there. "
+                 + "B. Deploy directly to production behind the feature flag. "
+                 + "Which of these two approaches should I take right now?"
+        XCTAssertEqual(finalSentence(text),
+                       "Which of these two approaches should I take right now?")
+    }
+
     // MARK: - truncatedDetail
 
     func test_truncatedDetail_shortUnchanged() {

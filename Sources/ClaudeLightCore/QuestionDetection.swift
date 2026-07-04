@@ -68,14 +68,17 @@ public func finalSentence(_ text: String) -> String? {
             let nextIndex = index + 1
             let atEnd = nextIndex >= chars.count
             let nextIsWhitespace = !atEnd && chars[nextIndex].unicodeScalars.allSatisfy { CharacterSet.whitespacesAndNewlines.contains($0) }
-            // A "." preceded by a single lettered character that isn't itself
-            // preceded by a letter (an isolated single-letter token, e.g. the
-            // "g" in "e.g.") reads as an abbreviation, not a sentence end.
+            // A "." preceded by a single lowercase-lettered character that isn't
+            // itself preceded by a letter (an isolated single-letter token,
+            // e.g. the "g" in "e.g.") reads as an abbreviation, not a sentence
+            // end. Capital single letters are excluded: they're usually option
+            // labels ("A.", "B.") which should split normally so the trailing
+            // question stays its own fragment.
             let isAbbreviationPeriod: Bool
             if ch == "." && index >= 1 {
-                let prevIsLetter = chars[index - 1].unicodeScalars.allSatisfy { CharacterSet.letters.contains($0) }
+                let prevIsLowercaseLetter = chars[index - 1].unicodeScalars.allSatisfy { CharacterSet.lowercaseLetters.contains($0) }
                 let prevPrevIsLetter = index >= 2 && chars[index - 2].unicodeScalars.allSatisfy { CharacterSet.letters.contains($0) }
-                isAbbreviationPeriod = prevIsLetter && !prevPrevIsLetter
+                isAbbreviationPeriod = prevIsLowercaseLetter && !prevPrevIsLetter
             } else {
                 isAbbreviationPeriod = false
             }
