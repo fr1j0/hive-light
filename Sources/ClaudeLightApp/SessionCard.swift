@@ -81,7 +81,8 @@ struct SessionCard: View {
         .onHover { hovering = $0 }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel([ClaudeLightCore.accessibilityLabel(for: session),
-                             cardSubtitle(for: session, errorReason: errorReason)]
+                             cardSubtitle(for: session, errorReason: errorReason),
+                             session.contextFraction.map { contextTooltip(fraction: $0) }]
                             .compactMap { $0 }.joined(separator: ". "))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { TerminalFocuser.focus(session) }

@@ -26,13 +26,13 @@ a full-width bar, which reads as task progress under a working card).
   (missing keys count 0). Model string from the same entry's
   `message.model`. Returns `min(tokens / window, 1.0)`, nil when no
   usage entry parses (fail-safe, like all transcript parsing).
-- Window map: Haiku-tier and legacy claude-3 model ids → 200_000;
-  everything else (all current 1M-window models, and unknown ids) →
-  1_000_000. Verified against the live model catalog and a real 658k-token
-  transcript on claude-fable-5.
+- Window map: Haiku-tier, legacy claude-3, and 4.5-era-and-older 4.x
+  model ids → 200_000; everything else (current 1M-window models and
+  unknown ids) → 1_000_000. Verified against the live model catalog and
+  a real 964k-token transcript on claude-fable-5.
 - Runs where the transcript is already in hand: the hook's Stop path
-  (same tail read that powers question detection — no new I/O, #43
-  budget untouched). The gauge therefore updates at turn boundaries.
+  (the same full-file read that powers question detection — no new I/O,
+  #43 budget untouched). The gauge therefore updates at turn boundaries.
 
 ### Schema & persistence
 

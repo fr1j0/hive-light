@@ -59,6 +59,23 @@ final class ContextUsageTests: XCTestCase {
         XCTAssertEqual(contextFraction(transcriptJSONL: t)!, 0.5, accuracy: 0.0001)
     }
 
+    func test_legacy45EraModels_use200kWindow() {
+        for model in ["claude-sonnet-4-5", "claude-opus-4-5", "claude-opus-4-1",
+                      "claude-opus-4-20250514"] {
+            let t = assistantUsage(input: 100_000, model: model)
+            XCTAssertEqual(contextFraction(transcriptJSONL: t)!, 0.5, accuracy: 0.0001,
+                           "window for \(model)")
+        }
+    }
+
+    func test_current46PlusModels_stayOneMillion() {
+        for model in ["claude-sonnet-4-6", "claude-opus-4-6", "claude-opus-4-7"] {
+            let t = assistantUsage(input: 500_000, model: model)
+            XCTAssertEqual(contextFraction(transcriptJSONL: t)!, 0.5, accuracy: 0.0001,
+                           "window for \(model)")
+        }
+    }
+
     func test_clampedAtOne() {
         XCTAssertEqual(contextFraction(transcriptJSONL: assistantUsage(input: 1_500_000))!,
                        1.0, accuracy: 0.0001)

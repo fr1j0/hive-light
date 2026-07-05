@@ -25,11 +25,13 @@ public func contextFraction(transcriptJSONL: String) -> Double? {
     return nil
 }
 
-/// The model's context window in tokens. Every current Claude model has a
-/// 1M window except the Haiku tier (200k); legacy claude-3 models were
-/// also 200k. Unknown/nil models get the 1M default — the common case.
+/// The model's context window in tokens. Current-generation models
+/// (Fable/Mythos 5, Opus 4.6+, Sonnet 4.6+/5) have 1M windows; the Haiku
+/// tier, legacy claude-3, and the 4.5-era-and-older 4.x models are 200k.
+/// Unknown/new ids get the 1M default — the common case going forward.
 func contextWindow(forModel model: String?) -> Double {
     guard let model = model?.lowercased() else { return 1_000_000 }
-    if model.contains("haiku") || model.contains("claude-3") { return 200_000 }
+    let smallWindowMarkers = ["haiku", "claude-3", "-4-5", "-4-1", "-4-0", "-4-2025"]
+    if smallWindowMarkers.contains(where: model.contains) { return 200_000 }
     return 1_000_000
 }
