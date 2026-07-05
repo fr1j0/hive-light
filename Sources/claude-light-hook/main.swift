@@ -8,7 +8,9 @@ if let payload = try? ClaudeLightJSON.decoder.decode(HookPayload.self, from: inp
     let store = SessionStore(directory: SessionStore.defaultDirectory())
     var transcriptJSONL: String? = nil
     if payload.hookEventName == "Stop", let path = payload.transcriptPath {
-        transcriptJSONL = try? String(contentsOfFile: path, encoding: .utf8)
+        // Lossy read: Claude Code appends concurrently and a strict UTF-8
+        // decode fails wholesale on a torn tail, freezing chip/gauge (#111).
+        transcriptJSONL = readTranscript(atPath: path)
     }
     // The ps-walk below is the expensive part of this hook and the terminal
     // never changes mid-session, so skip it once the session has a stored TTY —
