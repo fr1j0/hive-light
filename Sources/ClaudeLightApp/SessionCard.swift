@@ -126,7 +126,7 @@ struct SessionCard: View {
 
 /// The collapsible subagent block inside a card. Expanded: named mini-rows
 /// (failures red) behind a guide line, plus the overflow line. Collapsed:
-/// the compact chip ("⑂ 4 subagents · 1 failed").
+/// the compact chip ("3 of 5 done · 1 failed").
 struct SubagentRows: View {
     let list: SubagentList
     @Binding var collapsed: Bool
@@ -139,7 +139,7 @@ struct SubagentRows: View {
                 HStack(spacing: 4) {
                     Image(systemName: collapsed ? "chevron.right" : "chevron.down")
                         .font(.system(size: 8, weight: .bold))
-                    Text(collapsed ? subagentChipText(list) : "subagents")
+                    Text(subagentChipText(list))
                         .font(.system(size: 11))
                 }
                 .foregroundStyle(.secondary)
@@ -147,34 +147,88 @@ struct SubagentRows: View {
             .buttonStyle(.plain)
 
             if !collapsed {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(list.visible, id: \.id) { sub in
-                        HStack(spacing: 4) {
-                            if sub.state == .failed {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(PanelPalette.red)
-                            }
-                            Text(sub.label)
-                                .font(.system(size: 11))
-                                .foregroundStyle(sub.state == .failed
-                                                 ? AnyShapeStyle(PanelPalette.red)
-                                                 : AnyShapeStyle(.tertiary))
-                                .lineLimit(1)
-                        }
-                    }
-                    if list.overflowRunning > 0 {
-                        Text("+\(list.overflowRunning) more running")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .padding(.leading, 10)
-                .overlay(alignment: .leading) {
-                    Rectangle().fill(Color.primary.opacity(0.15)).frame(width: 2)
+                // Every agent is shown. A small fan-out lays out inline; beyond
+                // maxInlineRows the block would grow the card without bound, so
+                // it gets a fixed height and scrolls within — the whole list
+                // stays reachable whatever the batch size. The explicit height
+                // is required: a bare ScrollView here collapses the panel's
+                // ideal-height sizing.
+                if list.visible.count > Self.maxInlineRows {
+                    ScrollView { expandedRows }
+                        .frame(height: Self.scrollBlockHeight)
+                } else {
+                    expandedRows
                 }
             }
         }
+    }
+
+    @ViewBuilder private var expandedRows: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(list.visible, id: \.id) { sub in
+                HStack(spacing: 5) {
+                    switch sub.state {
+                    case .failed:
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(PanelPalette.red)
+                            .frame(width: 10)
+                    case .done:
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .semibold))
+                            // Pale green: "succeeded", paired with the red ✗ —
+                            // muted so the settled record stays quiet.
+                            .foregroundStyle(PanelPalette.green.opacity(0.7))
+                            .frame(width: 10)
+                    case .running:
+                        LivePulseDot().frame(width: 10)
+                    }
+                    Text(sub.label)
+                        .font(.system(size: 11))
+                        .strikethrough(sub.state == .done)
+                        .foregroundStyle(foreground(for: sub.state))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+        }
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(Color.primary.opacity(0.15)).frame(width: 2)
+        }
+    }
+
+    /// Above this many agents the row block scrolls internally instead of
+    /// growing the card. ~8 rows tall.
+    private static let maxInlineRows = 8
+    private static let scrollBlockHeight: CGFloat = 128
+
+    private func foreground(for state: Subagent.State) -> AnyShapeStyle {
+        switch state {
+        case .failed:  return AnyShapeStyle(PanelPalette.red)
+        case .done:    return AnyShapeStyle(.tertiary)   // dimmed settled tail
+        case .running: return AnyShapeStyle(.secondary)  // brighter than done
+        }
+    }
+}
+
+/// The live-agent marker: a small orange dot with a gentle pulse. Honors
+/// reduce-motion by falling back to a static dot.
+private struct LivePulseDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var animating = false
+
+    var body: some View {
+        Circle()
+            .fill(PanelPalette.orange)
+            .frame(width: 6, height: 6)
+            .scaleEffect(animating ? 1.0 : 0.7)
+            .opacity(animating ? 1.0 : 0.5)
+            .animation(reduceMotion ? nil
+                       : .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
+                       value: animating)
+            .onAppear { if !reduceMotion { animating = true } }
     }
 }
 

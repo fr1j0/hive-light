@@ -1,0 +1,108 @@
+<h2>Context-usage gauge — which treatment?</h2>
+<p class="subtitle">Same three sessions in each: comfortable (46%), filling up (78%), near auto-compact (93%). Percentage of the model's context window, updated on each hook event. Click a variant.</p>
+
+<style>
+  .panel {
+    width: 340px; background: #1e1f24; border-radius: 12px; padding: 8px;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size: 13px;
+    color: #e8e8ec; box-shadow: 0 8px 30px rgba(0,0,0,.45); margin: 0 auto;
+  }
+  .p-header { display:flex; align-items:center; gap:8px; padding: 6px 10px 8px; color:#9a9aa3; font-size:12px; }
+  .card { border-radius: 8px; padding: 8px 10px; background:#26272d; margin-bottom:5px; position:relative; overflow:hidden; }
+  .cardtop { display:flex; gap:9px; align-items:baseline; }
+  .dot { width:9px; height:9px; border-radius:50%; flex:none; position:relative; top:1px; }
+  .red { background:#ff3b30; } .orange { background:#ff9500; } .green { background:#34c759; }
+  .row-main { flex:1; min-width:0; }
+  .row-title { display:flex; justify-content:space-between; align-items:baseline; }
+  .proj { font-weight:600; }
+  .meta { color:#9a9aa3; font-size:11px; flex:none; margin-left:8px; }
+  .meta .warm { color:#ffb340; font-weight:600; }
+  .meta .hot { color:#ff6b61; font-weight:600; }
+  .detailline { color:#b9b9c2; font-size:12px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:18px; }
+  .ctxbar { height:2.5px; border-radius:2px; background:#3a3b42; margin-top:6px; margin-left:18px; }
+  .ctxbar > div { height:100%; border-radius:2px; }
+  .fill-ok { background:#5a5b64; } .fill-warm { background:#ffb340; } .fill-hot { background:#ff6b61; }
+  .p-divider { height:1px; background:#33343a; margin:6px 4px; }
+  .p-footer { display:flex; justify-content:space-between; align-items:center; padding:4px 10px 2px; color:#9a9aa3; font-size:11px; }
+</style>
+
+<div class="options">
+
+  <div class="option" data-choice="text" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Inline text — quiet number by the timer</h3>
+      <p>"12m · 78%". Grey when comfortable, orange past ~75%, red past ~90%. Zero pixels added; least glanceable.</p>
+      <div class="mockup"><div class="mockup-body" style="background:#111; padding:18px;">
+        <div class="panel">
+          <div class="p-header"><span style="color:#ffb340">●</span> 2 working · 1 needs you</div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">claude-light</span><span class="meta">3m · 46%</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">vatios</span><span class="meta">41m · <span class="warm">78%</span></span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot red"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">omega</span><span class="meta">1h · <span class="hot">93%</span></span></div>
+            <div class="detailline">Which migration order should I use?</div></div></div></div>
+          <div class="p-divider"></div>
+          <div class="p-footer"><span>⚙︎ Settings</span><span>Claude Light v0.13.2 · ⏻</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="bar" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Thin bar — hairline gauge under each card</h3>
+      <p>2px bar; grey fill when comfortable, orange/red as it climbs. Most glanceable at a distance; adds a little visual weight to every card.</p>
+      <div class="mockup"><div class="mockup-body" style="background:#111; padding:18px;">
+        <div class="panel">
+          <div class="p-header"><span style="color:#ffb340">●</span> 2 working · 1 needs you</div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">claude-light</span><span class="meta">3m</span></div>
+            <div class="detailline">running</div>
+            <div class="ctxbar"><div class="fill-ok" style="width:46%"></div></div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">vatios</span><span class="meta">41m</span></div>
+            <div class="detailline">running</div>
+            <div class="ctxbar"><div class="fill-warm" style="width:78%"></div></div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot red"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">omega</span><span class="meta">1h</span></div>
+            <div class="detailline">Which migration order should I use?</div>
+            <div class="ctxbar"><div class="fill-hot" style="width:93%"></div></div></div></div></div>
+          <div class="p-divider"></div>
+          <div class="p-footer"><span>⚙︎ Settings</span><span>Claude Light v0.13.2 · ⏻</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid — quiet until it matters</h3>
+      <p>Nothing shown below ~75%. Past it, the percentage appears next to the timer AND the bar fades in, tinted. Cleanest panels day-to-day; the gauge is itself an "exceptional event".</p>
+      <div class="mockup"><div class="mockup-body" style="background:#111; padding:18px;">
+        <div class="panel">
+          <div class="p-header"><span style="color:#ffb340">●</span> 2 working · 1 needs you</div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">claude-light</span><span class="meta">3m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">vatios</span><span class="meta">41m · <span class="warm">78%</span></span></div>
+            <div class="detailline">running</div>
+            <div class="ctxbar"><div class="fill-warm" style="width:78%"></div></div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot red"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">omega</span><span class="meta">1h · <span class="hot">93%</span></span></div>
+            <div class="detailline">Which migration order should I use?</div>
+            <div class="ctxbar"><div class="fill-hot" style="width:93%"></div></div></div></div></div>
+          <div class="p-divider"></div>
+          <div class="p-footer"><span>⚙︎ Settings</span><span>Claude Light v0.13.2 · ⏻</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+</div>

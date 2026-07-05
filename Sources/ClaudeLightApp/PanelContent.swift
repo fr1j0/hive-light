@@ -22,7 +22,9 @@ struct PanelContent: View {
     /// a few heavily fanned-out sessions can't outgrow the screen either.
     private var estimatedRowWeight: Int {
         let subagentRows = watcher.subagentsBySession.values.reduce(0) {
-            $0 + $1.visible.count + ($1.overflowRunning > 0 ? 1 : 0)
+            // A large fan-out's block scrolls internally (height-bounded at ~8
+            // rows), so cap its contribution to the panel-size estimate.
+            $0 + min($1.visible.count, 8)
         }
         return watcher.sessions.count + subagentRows / 3
     }

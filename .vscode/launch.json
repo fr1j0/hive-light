@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:claude-light}",
+            "name": "Debug claude-light-hook",
+            "target": "claude-light-hook",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug claude-light-hook"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:claude-light}",
+            "name": "Release claude-light-hook",
+            "target": "claude-light-hook",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release claude-light-hook"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:claude-light}",
+            "name": "Debug ClaudeLightApp",
+            "target": "ClaudeLightApp",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug ClaudeLightApp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:claude-light}",
+            "name": "Release ClaudeLightApp",
+            "target": "ClaudeLightApp",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release ClaudeLightApp"
+        }
+    ]
+}
