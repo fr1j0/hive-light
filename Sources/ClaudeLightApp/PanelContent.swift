@@ -42,14 +42,13 @@ struct PanelContent: View {
 
     @ViewBuilder
     private func sessionList(now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
             if let summary = watcher.summary {
                 HStack(spacing: 8) {
                     Circle().fill(headerColor).frame(width: 8, height: 8)
                     Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 10)
-                .padding(.top, 4)
                 Divider()
             }
 
@@ -66,7 +65,7 @@ struct PanelContent: View {
             Divider()
             footer
         }
-        .padding(8)
+        .padding(12)
     }
 
     @ViewBuilder
@@ -118,8 +117,10 @@ struct PanelContent: View {
             .foregroundStyle(.secondary)
             .accessibilityLabel("Quit Claude Light")
         }
-        .padding(.horizontal, 10)
-        .padding(.bottom, 2)
+        // The gearshape SF Symbol carries leading whitespace in its glyph box;
+        // pull the leading in 2pt so it optically aligns with the header dot.
+        .padding(.leading, 8)
+        .padding(.trailing, 10)
     }
 
     private var headerColor: Color {
