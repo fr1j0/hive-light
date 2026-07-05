@@ -137,7 +137,7 @@ final class ApplyHookTests: XCTestCase {
     }
 
     private let usageTranscript =
-        #"{"type":"assistant","message":{"role":"assistant","model":"claude-sonnet-5","usage":{"input_tokens":100000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0},"content":[{"type":"text","text":"x"}]}}"#
+        #"{"type":"assistant","message":{"role":"assistant","model":"claude-sonnet-5","usage":{"input_tokens":500000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0},"content":[{"type":"text","text":"x"}]}}"#
 
     func test_stopWithTranscript_writesContextFraction() throws {
         let store = tempStore()

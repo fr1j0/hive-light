@@ -25,11 +25,11 @@ public func contextFraction(transcriptJSONL: String) -> Double? {
     return nil
 }
 
-/// The model's context window in tokens. 1M-context model ids carry a
-/// "[1m]" / "-1m" marker; everything else defaults to the standard 200k,
-/// so unknown models read slightly hot rather than slightly safe.
+/// The model's context window in tokens. Every current Claude model has a
+/// 1M window except the Haiku tier (200k); legacy claude-3 models were
+/// also 200k. Unknown/nil models get the 1M default — the common case.
 func contextWindow(forModel model: String?) -> Double {
-    guard let model = model?.lowercased() else { return 200_000 }
-    if model.contains("[1m]") || model.contains("-1m") { return 1_000_000 }
-    return 200_000
+    guard let model = model?.lowercased() else { return 1_000_000 }
+    if model.contains("haiku") || model.contains("claude-3") { return 200_000 }
+    return 1_000_000
 }
