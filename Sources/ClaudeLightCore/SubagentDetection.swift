@@ -33,8 +33,9 @@ public struct SubagentList: Equatable, Sendable {
 /// session's transcript (JSONL) to surface its parallel subagents.
 ///
 /// State per subagent: no matching tool_result → **running**; `is_error: true` →
-/// **failed** (persisted so you notice it); otherwise → **done** (dropped).
-/// Only running + failed are returned. Running subagents are capped at `maxActive`
+/// **failed** (shown so you notice it, until the next real user prompt — typing
+/// again acknowledges the failure, so day-old interruptions can't haunt the
+/// panel); otherwise → **done** (dropped). Only running + failed are returned. Running subagents are capped at `maxActive`
 /// with the remainder reported as `overflowRunning`; failed subagents are never
 /// capped. Defensive/fail-safe: unparseable lines are skipped.
 public func subagents(fromTranscript jsonl: String, maxActive: Int = 5) -> SubagentList {
@@ -46,8 +47,20 @@ public func subagents(fromTranscript jsonl: String, maxActive: Int = 5) -> Subag
     for line in jsonl.split(separator: "\n", omittingEmptySubsequences: true) {
         guard let data = line.data(using: .utf8),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let content = (obj["message"] as? [String: Any])?["content"] as? [[String: Any]]
+              let message = obj["message"] as? [String: Any]
         else { continue }
+
+        // A new typed prompt supersedes already-failed fan-outs (running ones
+        // stay: a queued message can land while work is still in flight).
+        if isRealUserPrompt(obj: obj, message: message) {
+            let failedIDs = Set(errored.filter { $0.value }.map { $0.key })
+            if !failedIDs.isEmpty {
+                order.removeAll { failedIDs.contains($0.id) }
+                failedIDs.forEach { errored.removeValue(forKey: $0) }
+            }
+        }
+
+        guard let content = message["content"] as? [[String: Any]] else { continue }
 
         for block in content {
             switch block["type"] as? String {
