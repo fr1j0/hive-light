@@ -11,6 +11,35 @@ final class SubagentDetectionTests: XCTestCase {
     }
     private func join(_ lines: [String]) -> String { lines.joined(separator: "\n") }
 
+
+    private func userPrompt(_ text: String) -> String {
+        #"{"type":"user","message":{"role":"user","content":"\#(text)"}}"#
+    }
+
+    func test_failedSubagent_supersededByLaterUserPrompt_isDropped() {
+        let t = join([toolUse("t1", "Fix final-review findings"),
+                      toolResult("t1", isError: true),
+                      userPrompt("continue")])
+        XCTAssertTrue(subagents(fromTranscript: t).visible.isEmpty)
+    }
+
+    func test_failedSubagent_withNoLaterPrompt_staysVisible() {
+        let t = join([userPrompt("do the thing"),
+                      toolUse("t1", "verify build"),
+                      toolResult("t1", isError: true)])
+        XCTAssertEqual(subagents(fromTranscript: t).visible,
+                       [Subagent(id: "t1", label: "verify build", state: .failed)])
+    }
+
+    func test_runningSubagent_survivesLaterUserPrompt() {
+        // A queued user message can land while a foreground fan-out is still
+        // in flight — running entries must not be superseded.
+        let t = join([toolUse("t1", "long worker"),
+                      userPrompt("status?")])
+        XCTAssertEqual(subagents(fromTranscript: t).visible,
+                       [Subagent(id: "t1", label: "long worker", state: .running)])
+    }
+
     func test_toolUseWithNoResult_isRunning() {
         let t = toolUse("t1", "Review Task 4")
         let list = subagents(fromTranscript: t)

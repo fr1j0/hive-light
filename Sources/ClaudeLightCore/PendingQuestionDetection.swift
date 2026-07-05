@@ -64,7 +64,8 @@ private func questionText(toolName: String, input: [String: Any]?) -> String {
 
 /// User entry containing typed text (string content or a text block) — as
 /// opposed to a tool_result-only entry, which is an *answer* inside a turn.
-private func isRealUserPrompt(obj: [String: Any], message: [String: Any]) -> Bool {
+/// Shared with SubagentDetection (failed fan-outs are superseded the same way).
+func isRealUserPrompt(obj: [String: Any], message: [String: Any]) -> Bool {
     let isUser = (obj["type"] as? String) == "user" || (message["role"] as? String) == "user"
     guard isUser else { return false }
     if message["content"] is String { return true }
