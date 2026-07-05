@@ -126,7 +126,7 @@ struct SessionCard: View {
 
 /// The collapsible subagent block inside a card. Expanded: named mini-rows
 /// (failures red) behind a guide line, plus the overflow line. Collapsed:
-/// the compact chip ("⑂ 4 subagents · 1 failed").
+/// the compact chip ("⑂ 3 of 5 done · 1 failed").
 struct SubagentRows: View {
     let list: SubagentList
     @Binding var collapsed: Bool
@@ -139,7 +139,7 @@ struct SubagentRows: View {
                 HStack(spacing: 4) {
                     Image(systemName: collapsed ? "chevron.right" : "chevron.down")
                         .font(.system(size: 8, weight: .bold))
-                    Text(collapsed ? subagentChipText(list) : "subagents")
+                    Text(subagentChipText(list))
                         .font(.system(size: 11))
                 }
                 .foregroundStyle(.secondary)

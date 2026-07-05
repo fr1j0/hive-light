@@ -116,6 +116,9 @@ public func subagents(fromTranscript jsonl: String, maxRows: Int = 6) -> Subagen
     // running/done interleave in dispatch order; a second pass emits the kept
     // rows in dispatch order.
     let runningCount = total - doneCount - failedCount
+    // Failed agents are never dropped and consume budget first; if failures alone
+    // meet or exceed maxRows, running work is pushed entirely into the overflow
+    // line. Rare (6+ concurrent failures) and acceptable — failures are the signal.
     let runningBudget = max(0, maxRows - failedCount)
     let runningShown = min(runningCount, runningBudget)
     let doneBudget = max(0, maxRows - failedCount - runningShown)

@@ -151,6 +151,19 @@ final class SubagentDetectionTests: XCTestCase {
         XCTAssertEqual(list.overflowDone, 0)
     }
 
+    func test_bothRunningAndDoneOverflow_inOneBatch() {
+        var lines = (1...8).map { toolUse("r\($0)", "run \($0)") }
+        for i in 1...3 { lines += [toolUse("d\(i)", "done \(i)"), toolResult("d\(i)", isError: false)] }
+        let list = subagents(fromTranscript: join(lines), maxRows: 6)
+        XCTAssertEqual(list.visible.count, 6)
+        XCTAssertEqual(list.visible.allSatisfy { $0.state == .running }, true)
+        XCTAssertEqual(list.overflowRunning, 2)
+        XCTAssertEqual(list.overflowDone, 3)
+        XCTAssertEqual(list.total, 11)
+        XCTAssertEqual(list.doneCount, 3)
+        XCTAssertEqual(list.failedCount, 0)
+    }
+
     func test_longDescription_isTruncated() {
         let long = String(repeating: "x", count: 80)
         let label = subagents(fromTranscript: toolUse("t1", long)).visible.first?.label ?? ""
