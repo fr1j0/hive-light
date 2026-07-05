@@ -18,8 +18,7 @@ event with the session's cwd; reading one file is cheap and keeps the
 ## Data flow
 
 1. **Discovery.** From the payload's cwd, walk parent directories to the
-   nearest `.git` entry (stop at `/`; also stop at the user's home
-   directory's parent). Directory → repo root. File → worktree/submodule:
+   nearest `.git` entry (stop at `/`). Directory → repo root. File → worktree/submodule:
    parse the `gitdir: <path>` line and resolve it (relative paths resolve
    against the file's directory) to find the real git dir.
 2. **Parse.** Read `HEAD` in that git dir. `ref: refs/heads/<branch>` →
@@ -32,12 +31,18 @@ event with the session's cwd; reading one file is cheap and keeps the
    from), the stored value survives, like `context_fraction` across
    transcript-less events. Old apps ignore the key; old hooks never
    write it (no label).
-4. **Render.** `displayName(for:)` returns `"\(project) — \(branch)"`
-   when branch is non-nil, before the existing "(background)" headless
-   suffix logic. Card title, VoiceOver label, and notification titles
-   pick it up through the existing call sites. The title keeps its
-   single-line tail truncation; no extra branch-length cap (YAGNI until
-   it hurts).
+4. **Render.** The title is unchanged (`displayName(for:)` never mentions
+   the branch — live testing showed `project — branch` ran too long for
+   the card). Instead `cardSubtitle(for:errorReason:)` substitutes the
+   branch for the bare status word, with precedence error reason > detail
+   (#80) > branch (running/idle only) > friendly status label; a
+   needs-you session's detail/question always wins over the branch, since
+   a blocked card must say why. `subtitleShowsBranch(for:)` reports
+   whether the subtitle currently on screen is the branch, so the view
+   layer can style it as a ref — pale amber (sRGB 1.00, 0.76, 0.40),
+   12pt monospaced — rather than prose (`.secondary`, default font). The
+   title keeps its single-line tail truncation; no extra branch-length
+   cap (YAGNI until it hurts).
 
 ## Edge cases
 

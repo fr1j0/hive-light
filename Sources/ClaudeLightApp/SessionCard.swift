@@ -6,6 +6,7 @@ enum PanelPalette {
     static let red = Color(red: 1.00, green: 0.23, blue: 0.19)
     static let orange = Color(red: 1.00, green: 0.58, blue: 0.00)
     static let green = Color(red: 0.20, green: 0.78, blue: 0.35)
+    static let branchAmber = Color(red: 1.00, green: 0.76, blue: 0.40)
 
     static func color(for status: SessionStatus) -> Color {
         switch status {
@@ -65,10 +66,13 @@ struct SessionCard: View {
                 }
             }
             if let subtitle = cardSubtitle(for: session, errorReason: errorReason) {
+                let isBranch = subtitleShowsBranch(for: session)
                 Text(subtitle)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, design: isBranch ? .monospaced : .default))
                     .foregroundStyle(session.status == .error
                                      ? AnyShapeStyle(PanelPalette.red)
+                                     : isBranch
+                                     ? AnyShapeStyle(PanelPalette.branchAmber)
                                      : AnyShapeStyle(.secondary))
                     .lineLimit(1)
                     .truncationMode(.tail)

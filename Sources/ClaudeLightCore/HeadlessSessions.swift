@@ -13,9 +13,7 @@ public func visibleSessions(_ sessions: [Session]) -> [Session] {
     sessions.filter { !($0.status == .idle && isHeadless($0)) }
 }
 
-/// Row title for a session: "project — branch" when the cwd sits on a git
-/// branch (#82), with headless runs marked.
+/// Row title for a session: the project name, with headless runs marked.
 public func displayName(for session: Session) -> String {
-    let base = session.branch.map { "\(session.project) — \($0)" } ?? session.project
-    return isHeadless(session) ? "\(base) (background)" : base
+    isHeadless(session) ? "\(session.project) (background)" : session.project
 }

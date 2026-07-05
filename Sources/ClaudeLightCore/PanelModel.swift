@@ -9,14 +9,26 @@ public func cardTitle(for session: Session) -> String {
 }
 
 /// Card subtitle: what the session is blocked on or doing.
-/// Precedence: error reason > detail (#80) > friendly label.
+/// Precedence: error reason > detail (#80) > branch (running/idle only, #82)
+/// > friendly label.
 public func cardSubtitle(for session: Session, errorReason: String?) -> String? {
     switch session.status {
     case .error:
         return "API error: \(errorReason ?? "api error")"
+    case .running, .idle:
+        // The branch stands in for the bare status word (#82); needs-you
+        // states keep their question/label — a blocked card must say why.
+        return session.detail ?? session.branch ?? friendlyStatusLabel(for: session.status)
     default:
         return session.detail ?? friendlyStatusLabel(for: session.status)
     }
+}
+
+/// True when the subtitle is showing the git branch (#82) — the card
+/// styles it as a ref (amber, monospaced) rather than prose.
+public func subtitleShowsBranch(for session: Session) -> Bool {
+    (session.status == .running || session.status == .idle)
+        && session.detail == nil && session.branch != nil
 }
 
 /// Elapsed-state timer for the card's trailing edge ("12m").
