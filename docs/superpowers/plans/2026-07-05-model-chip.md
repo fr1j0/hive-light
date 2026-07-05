@@ -12,7 +12,7 @@
 
 - No subprocess and no new I/O in the hook path — `lastModelID` parses the transcript string already in memory.
 - Session-JSON key is `model`; absent key must decode (old hooks); additive only.
-- Merge semantics: transcript in hand → fresh `lastModelID` result (nil included); no transcript → stored value survives (same as `contextFraction`).
+- Merge semantics: transcript in hand → fresh `lastModelID` result, falling back to the stored value when extraction finds none; no transcript → stored value survives (same as `contextFraction`).
 - Short names: "claude-fable-5" → "fable-5", "claude-sonnet-5" → "sonnet-5", "claude-haiku-4-5-20251001" → "haiku-4.5", "claude-opus-4-8" → "opus-4.8", unknown ids pass through.
 - Chip: 9pt semibold uppercase, tertiary text, primary-9% capsule (4pt radius), trailing edge of the subtitle row, `layoutPriority(1)` so the left text truncates and the chip never compresses; full raw id in `.help`; card VoiceOver label appends "model <short name>". No chip when `model` nil.
 - Run tests with `swift test 2>&1 | grep -E "Executed [0-9]+ tests"`; SourceKit diagnostics are permanently stale — ignore them.
