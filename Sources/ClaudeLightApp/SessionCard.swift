@@ -68,16 +68,33 @@ struct SessionCard: View {
             }
             if let subtitle = cardSubtitle(for: session, errorReason: errorReason) {
                 let isBranch = subtitleShowsBranch(for: session)
-                Text(subtitle)
-                    .font(.system(size: isBranch ? 11 : 12))
-                    .foregroundStyle(session.status == .error
-                                     ? AnyShapeStyle(PanelPalette.red)
-                                     : isBranch
-                                     ? AnyShapeStyle(PanelPalette.branchAmber)
-                                     : AnyShapeStyle(.secondary))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .padding(.leading, 18)
+                HStack(spacing: 8) {
+                    Text(subtitle)
+                        .font(.system(size: isBranch ? 11 : 12))
+                        .foregroundStyle(session.status == .error
+                                         ? AnyShapeStyle(PanelPalette.red)
+                                         : isBranch
+                                         ? AnyShapeStyle(PanelPalette.branchAmber)
+                                         : AnyShapeStyle(.secondary))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if let model = session.model {
+                        Spacer(minLength: 6)
+                        // Model chip (#105): trailing edge, never compresses —
+                        // the subtitle text truncates instead.
+                        Text(shortModelName(model).uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .kerning(0.5)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.primary.opacity(0.09)))
+                            .layoutPriority(1)
+                            .help(model)
+                    }
+                }
+                .padding(.leading, 18)
             }
             if let list = subagents, !list.isEmpty {
                 SubagentRows(list: list, collapsed: $subagentsCollapsed)
@@ -99,6 +116,7 @@ struct SessionCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel([ClaudeLightCore.accessibilityLabel(for: session),
                              cardSubtitle(for: session, errorReason: errorReason),
+                             session.model.map { "model \(shortModelName($0))" },
                              session.contextFraction.map { contextTooltip(fraction: $0) }]
                             .compactMap { $0 }.joined(separator: ". "))
         .accessibilityAddTraits(.isButton)

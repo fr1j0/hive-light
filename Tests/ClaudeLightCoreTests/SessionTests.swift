@@ -56,4 +56,15 @@ final class SessionTests: XCTestCase {
         let s = try ClaudeLightJSON.decoder.decode(Session.self, from: Data(json.utf8))
         XCTAssertNil(s.branch)
     }
+
+    func test_model_roundTrips_andAbsentKeyDecodes() throws {
+        let s = Session(sessionID: "m1", status: .running, project: "p", cwd: "/x",
+                        updatedAt: Date(timeIntervalSince1970: 1_719_745_200),
+                        model: "claude-fable-5")
+        let back = try ClaudeLightJSON.decoder.decode(Session.self,
+                                                      from: ClaudeLightJSON.encoder.encode(s))
+        XCTAssertEqual(back.model, "claude-fable-5")
+        let json = #"{"session_id":"m2","status":"idle","project":"p","cwd":"/x","updated_at":"2026-07-05T08:00:00Z"}"#
+        XCTAssertNil(try ClaudeLightJSON.decoder.decode(Session.self, from: Data(json.utf8)).model)
+    }
 }
