@@ -28,30 +28,50 @@ normalized to it.
 
 ## Change
 
-Adopt the Settings rhythm in `PanelContent.sessionList`:
+Normalizing the two views to one rhythm turned out to need edits on both
+sides — the vertical rhythm on the main view, and horizontal alignment plus a
+few structural fixes on the Settings pane, discovered during live visual
+review.
+
+### `PanelContent.sessionList` (vertical rhythm)
 
 1. Outer padding `8 → 12` — frame matches Settings.
 2. Outer `VStack` `spacing: 4 → 10` — the header-divider and footer-divider
    gaps match Settings' airiness.
 3. Header: drop `.padding(.top, 4)`; keep `.padding(.horizontal, 10)` only.
-   The uniform 12pt frame + 10pt spacing supply the top breathing room.
-4. Footer: drop `.padding(.bottom, 2)`; keep `.padding(.horizontal, 10)` only.
+4. Footer: replace `.padding(.horizontal, 10).padding(.bottom, 2)` with
+   `.padding(.leading, 8).padding(.trailing, 10)` — the `.bottom, 2` tuck is
+   gone (the 12pt frame supplies it), and the leading is pulled in 2pt so the
+   `gearshape` SF Symbol optically aligns with the header status dot (the
+   symbol carries leading whitespace in its glyph box).
+5. The two dividers stay full-width (no horizontal padding) — this is the
+   "wide" divider both views share.
 
-The `SettingsPane` is not touched — it is already the target rhythm; the main
-view moves to meet it.
+### `SettingsPane` (horizontal alignment + structure)
 
-### Horizontal note
+1. Frame padding `.padding(12)` → `.padding(.vertical, 12).padding(.horizontal, 22)`
+   so the pane's content column matches the main view's, whose cards carry
+   their own `.padding(.horizontal, 10)` on top of the 12pt frame (→ 22pt).
+2. Add a `Divider()` beneath the Back/Settings header row so it is seated the
+   same way the main-view header and the footer are (it previously ran
+   straight into the toggles).
+3. Both dividers get `.padding(.horizontal, -10)` so they extend past the 22pt
+   content column out to the 12pt panel edge — matching the main view's wide
+   dividers.
+4. Wrap the three checkboxes in a `VStack(spacing: 10)` with
+   `.padding(.vertical, 4)` so the toggle group breathes away from the
+   dividers above and below it.
 
-The header/footer keep their extra `.padding(.horizontal, 10)` (so their
-content sits at 12 + 10 = 22pt from the panel edge, indented past the session
-cards). This is intentional and pre-existing — it is a horizontal concern,
-orthogonal to the vertical airiness being normalized, and is left as-is.
+## Result
+
+Both views share one system: 12pt vertical frame, 10pt stack spacing, a 22pt
+content column (header dot, cards, toggles, footer all align), and full-width
+"wide" dividers.
 
 ## Out of scope
 
 - Scroll-clamped list height (`scrolledListHeight = 480`) stays exactly as-is.
   It is a max height, unrelated to the padding rhythm.
-- `SettingsPane` spacing (the reference) is unchanged.
 - The `.frame(width: 340)` panel width is unchanged.
 
 ## Testing & verification

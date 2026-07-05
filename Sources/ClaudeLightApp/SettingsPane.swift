@@ -27,19 +27,27 @@ struct SettingsPane: View {
                     Text("Back").font(.system(size: 12))
                 }.hidden()
             }
+            // Extend past the 22pt content column to the 12pt panel edge, so
+            // the dividers are as wide as the main view's.
+            Divider().padding(.horizontal, -10)
 
-            Toggle("Show subagents", isOn: $watcher.showSubagents)
-            if watcher.launchAtLoginAvailable {
-                Toggle("Launch at login", isOn: Binding(
-                    get: { watcher.launchAtLoginEnabled },
-                    set: { _ in watcher.toggleLaunchAtLogin() }
-                ))
+            // Let the checkbox group breathe away from the dividers above and
+            // below it, beyond the base 10pt stack spacing.
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle("Show subagents", isOn: $watcher.showSubagents)
+                if watcher.launchAtLoginAvailable {
+                    Toggle("Launch at login", isOn: Binding(
+                        get: { watcher.launchAtLoginEnabled },
+                        set: { _ in watcher.toggleLaunchAtLogin() }
+                    ))
+                }
+                if watcher.notificationsAvailable {
+                    Toggle("Notify when a session needs you", isOn: $watcher.notifyOnNeedsYou)
+                }
             }
-            if watcher.notificationsAvailable {
-                Toggle("Notify when a session needs you", isOn: $watcher.notifyOnNeedsYou)
-            }
+            .padding(.vertical, 4)
 
-            Divider()
+            Divider().padding(.horizontal, -10)
 
             Button {
                 if watcher.hooksInstalled { watcher.removeHooks() } else { watcher.installHooks() }
@@ -63,6 +71,9 @@ struct SettingsPane: View {
         }
         .toggleStyle(.checkbox)
         .font(.system(size: 12))
-        .padding(12)
+        // Match the main view's content column: cards carry their own
+        // horizontal 10 on top of the 12pt frame, so its content sits at 22.
+        .padding(.vertical, 12)
+        .padding(.horizontal, 22)
     }
 }

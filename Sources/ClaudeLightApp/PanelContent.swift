@@ -117,7 +117,10 @@ struct PanelContent: View {
             .foregroundStyle(.secondary)
             .accessibilityLabel("Quit Claude Light")
         }
-        .padding(.horizontal, 10)
+        // The gearshape SF Symbol carries leading whitespace in its glyph box;
+        // pull the leading in 2pt so it optically aligns with the header dot.
+        .padding(.leading, 8)
+        .padding(.trailing, 10)
     }
 
     private var headerColor: Color {
