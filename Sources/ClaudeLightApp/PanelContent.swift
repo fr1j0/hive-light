@@ -9,6 +9,12 @@ import ClaudeLightCore
 struct PanelContent: View {
     @ObservedObject var watcher: SessionWatcher
     @State private var showingSettings = false
+    /// Past this many sessions the list scrolls at a fixed height so the
+    /// footer stays reachable. Below it, a plain stack hugs the content —
+    /// the .window panel sizes to ideal height, and a bare ScrollView's
+    /// ideal is ~zero (it collapses; measuring back is a layout deadlock).
+    private static let scrollThreshold = 8
+    private static let scrolledListHeight: CGFloat = 480
 
     var body: some View {
         Group {
@@ -36,32 +42,40 @@ struct PanelContent: View {
                 Divider()
             }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
-                    if watcher.sessions.isEmpty {
-                        Text("No active Claude Code sessions")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                    } else {
-                        ForEach(watcher.sessions, id: \.sessionID) { session in
-                            SessionCard(session: session,
-                                        errorReason: watcher.errorReasons[session.sessionID],
-                                        subagents: watcher.subagentsBySession[session.sessionID],
-                                        now: now)
-                        }
-                    }
+            if watcher.sessions.count > Self.scrollThreshold {
+                ScrollView {
+                    sessionRows(now: now)
                 }
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(height: Self.scrolledListHeight)
+            } else {
+                sessionRows(now: now)
             }
-            .frame(maxHeight: 480)
 
             // Stats strip (#83) docks between this divider and the footer.
             Divider()
             footer
         }
         .padding(8)
+    }
+
+    @ViewBuilder
+    private func sessionRows(now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if watcher.sessions.isEmpty {
+                Text("No active Claude Code sessions")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+            } else {
+                ForEach(watcher.sessions, id: \.sessionID) { session in
+                    SessionCard(session: session,
+                                errorReason: watcher.errorReasons[session.sessionID],
+                                subagents: watcher.subagentsBySession[session.sessionID],
+                                now: now)
+                }
+            }
+        }
     }
 
     private var footer: some View {
