@@ -49,13 +49,6 @@ final class HeadlessSessionTests: XCTestCase {
         XCTAssertEqual(visibleSessions([session("a", .idle, tty: "ttys000")]).count, 1)
     }
 
-    func test_visibleSessions_hidesDoneHeadless() {
-        let doneHeadless = Session(sessionID: "h", status: .done, project: "p", cwd: "/p",
-                                   updatedAt: Date(timeIntervalSince1970: 1_000_000))
-        let doneReachable = Session(sessionID: "r", status: .done, project: "p", cwd: "/p",
-                                    updatedAt: Date(timeIntervalSince1970: 1_000_000), tty: "ttys001")
-        XCTAssertEqual(visibleSessions([doneHeadless, doneReachable]).map(\.sessionID), ["r"])
-    }
 
     // MARK: – displayName
 

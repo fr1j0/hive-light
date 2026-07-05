@@ -7,11 +7,10 @@ public func isHeadless(_ session: Session) -> Bool {
     session.tty == nil && session.focusURL == nil
 }
 
-/// Drops the rows that are pure noise: headless sessions that are idle or
-/// done. A *live* headless job (running, or somehow blocked) is still worth
-/// seeing; a finished or parked one has nothing to reach and nothing pending.
+/// Drops the rows that are pure noise: idle headless sessions. A *live* headless
+/// job (running, or somehow blocked) is still worth seeing.
 public func visibleSessions(_ sessions: [Session]) -> [Session] {
-    sessions.filter { !(($0.status == .idle || $0.status == .done) && isHeadless($0)) }
+    sessions.filter { !($0.status == .idle && isHeadless($0)) }
 }
 
 /// Row title for a session: the project name, with headless runs marked.

@@ -4,7 +4,7 @@ import Foundation
 public func needsYou(_ status: SessionStatus) -> Bool {
     switch status {
     case .waiting, .attention, .handoff, .error: return true
-    case .running, .idle, .done: return false
+    case .running, .idle: return false
     }
 }
 
@@ -28,6 +28,5 @@ public func friendlyStatusLabel(for status: SessionStatus) -> String {
     case .handoff: return "review requested"
     case .idle: return "idle"
     case .error: return "API error"
-    case .done: return "done"
     }
 }

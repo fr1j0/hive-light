@@ -9,12 +9,9 @@ public func cardTitle(for session: Session) -> String {
 }
 
 /// Card subtitle: what the session is blocked on or doing.
-/// Precedence: error reason > detail (#80) > friendly label. Done rows have
-/// no subtitle (they render as a single flat line).
+/// Precedence: error reason > detail (#80) > friendly label.
 public func cardSubtitle(for session: Session, errorReason: String?) -> String? {
     switch session.status {
-    case .done:
-        return nil
     case .error:
         return "API error: \(errorReason ?? "api error")"
     default:
@@ -25,12 +22,6 @@ public func cardSubtitle(for session: Session, errorReason: String?) -> String? 
 /// Elapsed-state timer for the card's trailing edge ("12m").
 public func timerText(for session: Session, now: Date) -> String {
     relativeTime(secondsAgo: now.timeIntervalSince(session.updatedAt))
-}
-
-/// Flat done-row text — same wording the menu used (#54).
-public func doneRowText(for session: Session, now: Date) -> String {
-    let age = relativeTime(secondsAgo: now.timeIntervalSince(session.updatedAt))
-    return "\(displayName(for: session)) — done · \(age) ago"
 }
 
 /// Collapsed-subagents chip: "⑂ 3 subagents · 1 failed".

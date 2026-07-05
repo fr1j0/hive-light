@@ -5,6 +5,8 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
     switch action(for: payload, transcriptJSONL: transcriptJSONL) {
     case .ignore:
         return
+    case .delete:
+        try store.delete(sessionID: payload.sessionID)
     case .set(let status, let detail):
         let cwd = payload.cwd ?? ""
         // Terminal identity never changes mid-session: whatever was captured

@@ -21,7 +21,6 @@ public func statusCounts(for sessions: [Session]) -> StatusCounts {
         case .running: working += 1
         case .idle: idle += 1
         case .error: error += 1
-        case .done: break   // linger rows count nowhere ("as if absent", #54)
         }
     }
     return StatusCounts(needYou: needYou, working: working, idle: idle, error: error)
@@ -54,7 +53,6 @@ public func sortedForMenu(_ sessions: [Session]) -> [Session] {
         case .handoff: return 3
         case .running: return 4
         case .idle: return 5
-        case .done: return 6
         }
     }
     return sessions.sorted { a, b in
