@@ -43,15 +43,25 @@ struct PanelContent: View {
     @ViewBuilder
     private func sessionList(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let summary = watcher.summary {
-                HStack(spacing: 8) {
-                    Circle().fill(headerColor).frame(width: 8, height: 8)
-                    Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Circle().fill(headerColor).frame(width: 8, height: 8)
+                Text(watcher.summary ?? "No active sessions")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                Spacer()
+                Button { showingSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 12))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
-                .padding(.horizontal, 10)
-                .padding(.top, 4)
-                Divider()
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Settings")
+                .accessibilityLabel("Settings")
             }
+            .padding(.horizontal, 10)
+            .padding(.top, 4)
+            Divider()
 
             if estimatedRowWeight > Self.scrollThreshold {
                 ScrollView {
@@ -72,19 +82,11 @@ struct PanelContent: View {
     @ViewBuilder
     private func sessionRows(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            if watcher.sessions.isEmpty {
-                Text("No active Claude Code sessions")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-            } else {
-                ForEach(watcher.sessions, id: \.sessionID) { session in
-                    SessionCard(session: session,
-                                errorReason: watcher.errorReasons[session.sessionID],
-                                subagents: watcher.subagentsBySession[session.sessionID],
-                                now: now)
-                }
+            ForEach(watcher.sessions, id: \.sessionID) { session in
+                SessionCard(session: session,
+                            errorReason: watcher.errorReasons[session.sessionID],
+                            subagents: watcher.subagentsBySession[session.sessionID],
+                            now: now)
             }
         }
     }
