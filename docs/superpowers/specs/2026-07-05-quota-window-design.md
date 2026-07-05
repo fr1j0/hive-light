@@ -54,9 +54,11 @@ Transcripts run to MBs; the panel must not re-parse them per tick.
   file: the list of (timestamp, tokens, model) triples for assistant
   entries in the last 6 hours.
 - Only files with mtime within 6 hours are read at all; the scan
-  recomputes on watcher reload and on a 60-second timer while the
-  panel is open (the countdown displays minutes, so a 1s tick is
-  waste).
+  recomputes on watcher reload (every hook write lands a file event, so
+  it stays fresh), while the countdown TEXT re-derives each second from
+  the panel's existing TimelineView — no new timer. The header guards
+  `resetAt > now` so a window that lapses between reloads hides rather
+  than showing a dead countdown.
 - Parsing reuses the existing line-tolerant JSONL approach (skip
   undecodable lines).
 
