@@ -68,7 +68,7 @@ struct SessionCard: View {
             if let subtitle = cardSubtitle(for: session, errorReason: errorReason) {
                 let isBranch = subtitleShowsBranch(for: session)
                 Text(subtitle)
-                    .font(.system(size: 12, design: isBranch ? .monospaced : .default))
+                    .font(.system(size: isBranch ? 11 : 12))
                     .foregroundStyle(session.status == .error
                                      ? AnyShapeStyle(PanelPalette.red)
                                      : isBranch

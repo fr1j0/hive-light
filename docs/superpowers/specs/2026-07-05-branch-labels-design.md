@@ -40,7 +40,7 @@ event with the session's cwd; reading one file is cheap and keeps the
    a blocked card must say why. `subtitleShowsBranch(for:)` reports
    whether the subtitle currently on screen is the branch, so the view
    layer can style it as a ref — pale amber (sRGB 1.00, 0.76, 0.40),
-   12pt monospaced — rather than prose (`.secondary`, default font). The
+   11pt regular — rather than prose (12pt `.secondary`). The
    title keeps its single-line tail truncation; no extra branch-length
    cap (YAGNI until it hurts).
 
