@@ -40,9 +40,16 @@ Red always wins the aggregate, so a single waiting session is never buried behin
 Click the icon for the full picture:
 
 - A one-line summary header, such as `1 needs you · 2 working`.
-- Every live session, sorted by urgency (needs-you first), each with a colored status dot, its project name, what it's doing, and how long ago it last changed.
-- A Settings submenu: show subagents, launch at login, needs-you notifications, and one-click install or removal of the Claude Code hooks.
-- Quit, and the running version.
+- One card per session, sorted by urgency: status dot, project name, a live
+  elapsed-state timer, and — when a session is blocked — the actual question
+  or permission request it's waiting on.
+- Running sessions with parallel subagents show them as collapsible rows
+  inside the card.
+- Finished sessions linger briefly as a greyed "done" row before dropping off.
+- Click a card to jump to that session's terminal.
+- Settings flip in place: show subagents, launch at login, needs-you
+  notifications, and one-click install or removal of the Claude Code hooks.
+- Quit and the running version live in the footer.
 
 ## Features
 

@@ -19,7 +19,7 @@ struct ClaudeLightApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(watcher: watcher)
+            PanelContent(watcher: watcher)
         } label: {
             Image(nsImage: TrafficLightIcon.image(
                 state: watcher.icon,
@@ -30,7 +30,7 @@ struct ClaudeLightApp: App {
                     DispatchQueue.main.async { offerHookInstallIfNeeded() }
                 }
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 
     /// On the very first launch, if the hooks aren't installed yet, greet the
