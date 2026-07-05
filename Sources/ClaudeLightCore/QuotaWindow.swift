@@ -16,26 +16,18 @@ public struct UsageEvent: Equatable, Sendable {
     }
 }
 
-private let isoFractional: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f
-}()
-private let isoPlain: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime]
-    return f
-}()
-
-func parseTranscriptDate(_ s: String) -> Date? {
-    isoFractional.date(from: s) ?? isoPlain.date(from: s)
-}
-
 /// Usage events from a transcript's JSONL. Tokens count input +
 /// cache-creation + output; cache READS are excluded — they dominate raw
 /// counts while being the least quota-correlated component (spec #83).
 /// Defensive line-by-line parse, same stance as `contextFraction` (#96).
 public func usageEvents(transcriptJSONL: String, source: String) -> [UsageEvent] {
+    // Create formatters once per invocation to avoid shared mutable statics
+    // that could cause races if concurrent calls extract events.
+    let isoFractional = ISO8601DateFormatter()
+    isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let isoPlain = ISO8601DateFormatter()
+    isoPlain.formatOptions = [.withInternetDateTime]
+
     var events: [UsageEvent] = []
     for line in transcriptJSONL.split(separator: "\n", omittingEmptySubsequences: true) {
         guard let data = line.data(using: .utf8),
@@ -46,7 +38,7 @@ public func usageEvents(transcriptJSONL: String, source: String) -> [UsageEvent]
         guard isAssistant,
               let usage = message["usage"] as? [String: Any],
               let ts = obj["timestamp"] as? String,
-              let time = parseTranscriptDate(ts) else { continue }
+              let time = isoFractional.date(from: ts) ?? isoPlain.date(from: ts) else { continue }
         func tokens(_ key: String) -> Double {
             (usage[key] as? NSNumber)?.doubleValue ?? 0
         }

@@ -29,7 +29,9 @@ final class QuotaWindowTests: XCTestCase {
 
     func test_parsesTimestampsWithAndWithoutFractionalSeconds() {
         let jsonl = entry(ts: "2026-07-05T12:00:00.123Z") + "\n" + entry(ts: "2026-07-05T12:01:00Z")
-        XCTAssertEqual(usageEvents(transcriptJSONL: jsonl, source: "a").count, 2)
+        let events = usageEvents(transcriptJSONL: jsonl, source: "a")
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(events[1].time, iso("2026-07-05T12:01:00Z"))
     }
 
     func test_skipsNonAssistant_corrupt_andUsagelessLines() {
