@@ -168,7 +168,7 @@ final class SessionWatcher: ObservableObject {
             for session in newlyNeedingYou(previous: previous, current: sorted) {
                 let body = cardSubtitle(for: session, errorReason: reasons[session.sessionID])
                     ?? friendlyStatusLabel(for: session.status)
-                notifier.post(project: session.project, body: body, sessionID: session.sessionID)
+                notifier.post(project: displayName(for: session), body: body, sessionID: session.sessionID)
             }
         }
         lastStatuses = Dictionary(sorted.map { ($0.sessionID, $0.status) },

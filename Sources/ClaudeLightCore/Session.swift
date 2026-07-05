@@ -29,11 +29,14 @@ public struct Session: Codable, Sendable, Equatable {
     /// assistant entry's usage tokens over the model's window. Persists
     /// across transcript-less events; nil until first measured.
     public var contextFraction: Double?
+    /// Git branch of the session's cwd at the last hook event (#82); nil for
+    /// non-repos, detached HEAD, and sessions written by older hooks.
+    public var branch: String?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
-                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil) {
+                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -46,6 +49,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.focusURL = focusURL
         self.detail = detail
         self.contextFraction = contextFraction
+        self.branch = branch
     }
 
     enum CodingKeys: String, CodingKey {
@@ -61,6 +65,7 @@ public struct Session: Codable, Sendable, Equatable {
         case focusURL = "focus_url"
         case detail
         case contextFraction = "context_fraction"
+        case branch
     }
 }
 

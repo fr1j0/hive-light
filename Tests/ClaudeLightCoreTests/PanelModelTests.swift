@@ -5,9 +5,11 @@ final class PanelModelTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_000_000)
 
     private func s(_ status: SessionStatus, detail: String? = nil,
-                   ageSeconds: TimeInterval = 0, cwd: String = "/x/vatios") -> Session {
+                   ageSeconds: TimeInterval = 0, cwd: String = "/x/vatios",
+                   branch: String? = nil) -> Session {
         Session(sessionID: UUID().uuidString, status: status, project: "vatios", cwd: cwd,
-                updatedAt: now.addingTimeInterval(-ageSeconds), tty: "ttys000", detail: detail)
+                updatedAt: now.addingTimeInterval(-ageSeconds), tty: "ttys000", detail: detail,
+                branch: branch)
     }
 
     func test_cardTitle_isDisplayName() {
@@ -71,5 +73,33 @@ final class PanelModelTests: XCTestCase {
 
     func test_contextTooltip_wording() {
         XCTAssertEqual(contextTooltip(fraction: 0.78), "context 78% used")
+    }
+
+    // MARK: – branch-in-subtitle (#82)
+
+    func test_cardSubtitle_idleBranch_showsBranch() {
+        let session = s(.idle, branch: "feat/x")
+        XCTAssertEqual(cardSubtitle(for: session, errorReason: nil), "feat/x")
+        XCTAssertTrue(subtitleShowsBranch(for: session))
+    }
+
+    func test_cardSubtitle_waitingWithBranch_keepsFriendlyLabel() {
+        let session = s(.waiting, branch: "feat/x")
+        XCTAssertEqual(cardSubtitle(for: session, errorReason: nil),
+                       friendlyStatusLabel(for: .waiting))
+        XCTAssertFalse(subtitleShowsBranch(for: session))
+    }
+
+    func test_cardSubtitle_runningWithBranchAndDetail_detailWins() {
+        let session = s(.running, detail: "Deploy where?", branch: "feat/x")
+        XCTAssertEqual(cardSubtitle(for: session, errorReason: nil), "Deploy where?")
+        XCTAssertFalse(subtitleShowsBranch(for: session))
+    }
+
+    func test_cardSubtitle_errorWithBranch_showsError() {
+        let session = s(.error, branch: "feat/x")
+        XCTAssertEqual(cardSubtitle(for: session, errorReason: "rate limited"),
+                       "API error: rate limited")
+        XCTAssertFalse(subtitleShowsBranch(for: session))
     }
 }

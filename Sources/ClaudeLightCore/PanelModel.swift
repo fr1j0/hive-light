@@ -3,20 +3,33 @@ import Foundation
 // Pure derivations for the panel UI (#86) — every string the SwiftUI layer
 // renders verbatim, kept here so it is testable without a view hierarchy.
 
-/// Card title: the project display name. Branch labels join here when #82 lands.
+/// Card title: the project display name. The git branch renders in the
+/// subtitle (#82), never here — titles ran too long with it.
 public func cardTitle(for session: Session) -> String {
     displayName(for: session)
 }
 
 /// Card subtitle: what the session is blocked on or doing.
-/// Precedence: error reason > detail (#80) > friendly label.
+/// Precedence: error reason > detail (#80) > branch (running/idle only, #82)
+/// > friendly label.
 public func cardSubtitle(for session: Session, errorReason: String?) -> String? {
     switch session.status {
     case .error:
         return "API error: \(errorReason ?? "api error")"
+    case .running, .idle:
+        // The branch stands in for the bare status word (#82); needs-you
+        // states keep their question/label — a blocked card must say why.
+        return session.detail ?? session.branch ?? friendlyStatusLabel(for: session.status)
     default:
         return session.detail ?? friendlyStatusLabel(for: session.status)
     }
+}
+
+/// True when the subtitle is showing the git branch (#82) — the card
+/// styles it as a ref (amber, monospaced) rather than prose.
+public func subtitleShowsBranch(for session: Session) -> Bool {
+    (session.status == .running || session.status == .idle)
+        && session.detail == nil && session.branch != nil
 }
 
 /// Elapsed-state timer for the card's trailing edge ("12m").

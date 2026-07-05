@@ -6,6 +6,8 @@ enum PanelPalette {
     static let red = Color(red: 1.00, green: 0.23, blue: 0.19)
     static let orange = Color(red: 1.00, green: 0.58, blue: 0.00)
     static let green = Color(red: 0.20, green: 0.78, blue: 0.35)
+    // 70% opacity: a quiet ref label, not a status highlight.
+    static let branchAmber = Color(red: 1.00, green: 0.76, blue: 0.40).opacity(0.7)
 
     static func color(for status: SessionStatus) -> Color {
         switch status {
@@ -65,10 +67,13 @@ struct SessionCard: View {
                 }
             }
             if let subtitle = cardSubtitle(for: session, errorReason: errorReason) {
+                let isBranch = subtitleShowsBranch(for: session)
                 Text(subtitle)
-                    .font(.system(size: 12))
+                    .font(.system(size: isBranch ? 11 : 12))
                     .foregroundStyle(session.status == .error
                                      ? AnyShapeStyle(PanelPalette.red)
+                                     : isBranch
+                                     ? AnyShapeStyle(PanelPalette.branchAmber)
                                      : AnyShapeStyle(.secondary))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -180,7 +185,9 @@ struct ContextTicks: View {
 
     private static func color(for level: ContextLevel) -> Color {
         switch level {
-        case .ok: return Color.secondary
+        // Bright, not .secondary: on the dark panel, secondary grey is
+        // nearly the unlit 15% — lit calm ticks must read as lit.
+        case .ok: return Color.primary.opacity(0.75)
         case .warm: return PanelPalette.orange
         case .hot: return PanelPalette.red
         }
