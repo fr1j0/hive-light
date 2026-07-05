@@ -109,7 +109,7 @@ struct PanelContent: View {
             Spacer()
 
             if let version = Self.appVersion {
-                Text("v\(version)").font(.system(size: 11)).foregroundStyle(.tertiary)
+                Text("Claude Light v\(version)").font(.system(size: 11)).foregroundStyle(.tertiary)
             }
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power").font(.system(size: 11))
