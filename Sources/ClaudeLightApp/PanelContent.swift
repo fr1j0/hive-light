@@ -93,11 +93,9 @@ struct PanelContent: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Button { showingSettings = true } label: {
-                Label("Settings", systemImage: "gearshape").font(.system(size: 11))
+            if let version = Self.appVersion {
+                Text("Claude Light v\(version)").font(.system(size: 11)).foregroundStyle(.tertiary)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
 
             // A failed hook install stays visible without opening Settings.
             if let hookError = watcher.hookActionError {
@@ -110,9 +108,6 @@ struct PanelContent: View {
 
             Spacer()
 
-            if let version = Self.appVersion {
-                Text("Claude Light v\(version)").font(.system(size: 11)).foregroundStyle(.tertiary)
-            }
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power").font(.system(size: 11))
             }
