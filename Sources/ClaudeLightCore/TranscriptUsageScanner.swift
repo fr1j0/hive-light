@@ -18,26 +18,22 @@ public final class TranscriptUsageScanner {
 
     public func recentEvents(now: Date) -> [UsageEvent] {
         let fm = FileManager.default
-        guard let projects = try? fm.contentsOfDirectory(
-            at: projectsDirectory, includingPropertiesForKeys: nil) else { return [] }
+        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey]
+        guard let enumerator = fm.enumerator(
+            at: projectsDirectory, includingPropertiesForKeys: resourceKeys) else { return [] }
 
         var events: [UsageEvent] = []
         var live: Set<String> = []
-        for project in projects {
-            guard let files = try? fm.contentsOfDirectory(
-                at: project, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey])
-            else { continue }
-            for file in files where file.pathExtension == "jsonl" {
-                guard let values = try? file.resourceValues(
-                        forKeys: [.contentModificationDateKey, .fileSizeKey]),
-                      let mtime = values.contentModificationDate,
-                      now.timeIntervalSince(mtime) < Self.horizon else { continue }
-                let stamp = FileStamp(mtime: mtime, size: UInt64(values.fileSize ?? 0))
-                live.insert(file.path)
-                events += cache.value(for: file.path, stamp: stamp) {
-                    guard let jsonl = try? String(contentsOf: file, encoding: .utf8) else { return [] }
-                    return usageEvents(transcriptJSONL: jsonl, source: file.path)
-                }
+        for case let file as URL in enumerator where file.pathExtension == "jsonl" {
+            guard let values = try? file.resourceValues(forKeys: Set(resourceKeys)),
+                  let mtime = values.contentModificationDate,
+                  let fileSize = values.fileSize,
+                  now.timeIntervalSince(mtime) < Self.horizon else { continue }
+            let stamp = FileStamp(mtime: mtime, size: UInt64(fileSize))
+            live.insert(file.path)
+            events += cache.value(for: file.path, stamp: stamp) {
+                guard let jsonl = try? String(contentsOf: file, encoding: .utf8) else { return [] }
+                return usageEvents(transcriptJSONL: jsonl, source: file.path)
             }
         }
         cache.evict(keeping: live)
