@@ -2,6 +2,7 @@ import Foundation
 
 public enum HookAction: Equatable, Sendable {
     case set(SessionStatus, detail: String?)
+    case delete
     case ignore
 }
 
@@ -33,9 +34,7 @@ public func action(for payload: HookPayload, transcriptJSONL: String? = nil) -> 
         // permission to use Bash") — carry it into the banner (#80).
         return .set(.waiting, detail: payload.message.map(truncatedDetail))
     case "SessionEnd":
-        // Tombstone, not delete: the row lingers briefly as "done" (#54).
-        // The app removes the file after doneLingerWindow.
-        return .set(.done, detail: nil)
+        return .delete
     default:
         return .ignore
     }

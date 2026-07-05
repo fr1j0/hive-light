@@ -30,18 +30,9 @@ final class PanelModelTests: XCTestCase {
         XCTAssertEqual(cardSubtitle(for: s(.error), errorReason: nil), "API error: api error")
     }
 
-    func test_cardSubtitle_doneIsNil() {
-        XCTAssertNil(cardSubtitle(for: s(.done), errorReason: nil))
-    }
-
     func test_timerText_formatsAge() {
         XCTAssertEqual(timerText(for: s(.attention, ageSeconds: 720), now: now), "12m")
         XCTAssertEqual(timerText(for: s(.running, ageSeconds: 45), now: now), "45s")
-    }
-
-    func test_doneRowText_matchesMenuWording() {
-        XCTAssertEqual(doneRowText(for: s(.done, ageSeconds: 40), now: now),
-                       "vatios — done · 40s ago")
     }
 
     func test_subagentChipText_pluralAndFailed() {

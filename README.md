@@ -45,7 +45,6 @@ Click the icon for the full picture:
   or permission request it's waiting on.
 - Running sessions with parallel subagents show them as collapsible rows
   inside the card.
-- Finished sessions linger briefly as a greyed "done" row before dropping off.
 - Click a card to jump to that session's terminal.
 - Settings flip in place: show subagents, launch at login, needs-you
   notifications, and one-click install or removal of the Claude Code hooks.

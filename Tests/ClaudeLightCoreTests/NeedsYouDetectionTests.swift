@@ -70,17 +70,4 @@ final class NeedsYouDetectionTests: XCTestCase {
         XCTAssertEqual(friendlyStatusLabel(for: .error), "API error")
     }
 
-    func test_done_isNotNeedsYou() {
-        XCTAssertFalse(needsYou(.done))
-    }
-
-    func test_runningToDone_isNotNewlyNeedingYou() {
-        let session = Session(sessionID: "s1", status: .done, project: "p", cwd: "/p",
-                              updatedAt: Date(timeIntervalSince1970: 1_000_000))
-        XCTAssertTrue(newlyNeedingYou(previous: ["s1": .running], current: [session]).isEmpty)
-    }
-
-    func test_friendlyStatusLabel_done() {
-        XCTAssertEqual(friendlyStatusLabel(for: .done), "done")
-    }
 }

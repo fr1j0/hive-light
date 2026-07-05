@@ -39,8 +39,8 @@ final class HookActionTests: XCTestCase {
         XCTAssertEqual(action(for: payload("Notification")), .set(.waiting, detail: nil))
     }
 
-    func test_sessionEnd_setsDone() {
-        XCTAssertEqual(action(for: payload("SessionEnd")), .set(.done, detail: nil))
+    func test_sessionEnd_deletes() {
+        XCTAssertEqual(action(for: payload("SessionEnd")), .delete)
     }
 
     func test_unknownEvent_isIgnored() {

@@ -72,18 +72,4 @@ final class AggregateTests: XCTestCase {
         XCTAssertFalse(aggregateNeedsAttention([s(.handoff)]))
     }
 
-    func test_expiredDoneSessions_keepsYoungDone() {
-        XCTAssertTrue(expiredDoneSessions([s(.done, ageSeconds: 60)], now: now).isEmpty)
-    }
-
-    func test_expiredDoneSessions_returnsOldDone() {
-        let old = s(.done, ageSeconds: 121)
-        XCTAssertEqual(expiredDoneSessions([old, s(.done, ageSeconds: 10)], now: now).map(\.sessionID),
-                       [old.sessionID])
-    }
-
-    func test_expiredDoneSessions_neverReturnsNonDone() {
-        XCTAssertTrue(expiredDoneSessions([s(.idle, ageSeconds: 10_000), s(.running, ageSeconds: 10_000)],
-                                          now: now).isEmpty)
-    }
 }

@@ -12,14 +12,13 @@ enum PanelPalette {
         case .waiting, .attention, .handoff, .error: return red
         case .running: return orange
         case .idle: return green
-        case .done: return Color.secondary
         }
     }
 }
 
 /// One session in the panel: a clickable card (status dot, title, live
 /// timer, subtitle with the pending question) with collapsible subagent
-/// rows. Done sessions render as a flat, non-interactive grey line (#54).
+/// rows.
 struct SessionCard: View {
     let session: Session
     let errorReason: String?
@@ -31,27 +30,7 @@ struct SessionCard: View {
     @State private var hovering = false
 
     var body: some View {
-        if session.status == .done {
-            doneRow
-        } else {
-            card
-        }
-    }
-
-    private var doneRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-            Text(doneRowText(for: session, now: now))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(ClaudeLightCore.accessibilityLabel(for: session))
+        card
     }
 
     private var card: some View {
