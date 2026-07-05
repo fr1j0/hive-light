@@ -45,6 +45,8 @@ final class SessionWatcher: ObservableObject {
     /// baseline, so launching never replays already-red sessions.
     private var lastStatuses: [String: SessionStatus]? = nil
     private let subagentCache = FileMemoCache<SubagentList>()
+    private let usageScanner = TranscriptUsageScanner()
+    @Published var quotaWindow: ClaudeLightCore.QuotaWindow?
     private let store: SessionStore
     private let installer: HookInstaller
     private var stream: FSEventStreamRef?
@@ -176,6 +178,10 @@ final class SessionWatcher: ObservableObject {
         self.sessions = sorted
         self.errorReasons = reasons
         self.subagentsBySession = subagentMap
+        // Quota window (#83): read-side scan, memoized per transcript;
+        // recomputed here because every hook write lands a file event.
+        self.quotaWindow = ClaudeLightCore.quotaWindow(
+            events: usageScanner.recentEvents(now: Date()), now: Date())
         let state = iconState(for: sorted)
         self.icon = state
         self.summary = summaryText(for: statusCounts(for: sorted))

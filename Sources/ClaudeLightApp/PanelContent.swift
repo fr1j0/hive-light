@@ -47,6 +47,15 @@ struct PanelContent: View {
                 HStack(spacing: 8) {
                     Circle().fill(headerColor).frame(width: 8, height: 8)
                     Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    if let window = watcher.quotaWindow, window.resetAt > now {
+                        Text("↻ \(countdownText(until: window.resetAt, now: now))")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                            .monospacedDigit()
+                            .help(quotaTooltip(window: window))
+                            .accessibilityLabel(quotaTooltip(window: window))
+                    }
                 }
                 .padding(.horizontal, 10)
                 .padding(.top, 4)
