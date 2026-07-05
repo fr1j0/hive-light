@@ -43,18 +43,25 @@ struct PanelContent: View {
     @ViewBuilder
     private func sessionList(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let summary = watcher.summary {
+            let quota = watcher.quotaWindow.flatMap { $0.resetAt > now ? $0 : nil }
+            if watcher.summary != nil || quota != nil {
                 HStack(spacing: 8) {
-                    Circle().fill(headerColor).frame(width: 8, height: 8)
-                    Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
+                    if let summary = watcher.summary {
+                        Circle().fill(headerColor).frame(width: 8, height: 8)
+                        Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
                     Spacer(minLength: 8)
-                    if let window = watcher.quotaWindow, window.resetAt > now {
+                    if let window = quota {
+                        // Quota window (#83): visible whenever the window is
+                        // live — including with zero sessions, when "can I
+                        // start something big?" matters most.
+                        let tip = quotaTooltip(window: window)
                         Text("↻ \(countdownText(until: window.resetAt, now: now))")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                             .monospacedDigit()
-                            .help(quotaTooltip(window: window))
-                            .accessibilityLabel(quotaTooltip(window: window))
+                            .help(tip)
+                            .accessibilityLabel(tip)
                     }
                 }
                 .padding(.horizontal, 10)
