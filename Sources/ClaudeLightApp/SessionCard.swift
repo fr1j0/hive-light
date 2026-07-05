@@ -158,6 +158,10 @@ struct ContextTicks: View {
                     .frame(width: 4, height: 7)
             }
         }
+        // Pad before .help so the tooltip region is taller than the 7pt
+        // ticks — a strip that thin is too easy to slide off mid-hover.
+        .padding(.vertical, 4)
+        .padding(.horizontal, 2)
         .help(contextTooltip(fraction: fraction))
         .accessibilityLabel(contextTooltip(fraction: fraction))
     }

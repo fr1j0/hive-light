@@ -4,6 +4,13 @@ import ClaudeLightCore
 
 @main
 struct ClaudeLightApp: App {
+    init() {
+        // AppKit's ~2s default hover delay makes the tick gauge's tooltip
+        // feel broken — by the time it fires the cursor has moved on.
+        // register(defaults:) still respects an explicit user override.
+        UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
+    }
+
     @StateObject private var watcher: SessionWatcher = {
         let settings = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/settings.json")
