@@ -89,7 +89,7 @@ struct SubagentList {
 
 A large fan-out must not balloon the panel. When expanded:
 
-- **Cap at ~6 visible rows.** Priority order: **failed → running → done**.
+- **Cap at 6 visible rows.** Priority order: **failed → running → done**.
   Failures and live work always surface; the quiet done tail is the first to
   collapse.
 - The collapsed done tail becomes a **`+K done`** line; any collapsed running
@@ -110,11 +110,15 @@ today — `subagentsCollapsed = false` is unchanged). Replaces today's
 
 ### Expanded rows (dispatch order, stable in place)
 
-| State   | Mark | Style                                    |
-|---------|------|------------------------------------------|
-| done    | `✓`  | `.tertiary`, strikethrough (dimmed)      |
-| running | none | normal weight (as today)                 |
-| failed  | `✗`  | `PanelPalette.red` (as today)            |
+| State   | Mark          | Style                                              |
+|---------|---------------|----------------------------------------------------|
+| done    | `✓` tertiary  | `.tertiary`, strikethrough (dimmed settled tail)   |
+| running | orange pulse dot | `.secondary` — brighter than done, so live work reads at a glance against the struck tail |
+| failed  | `✗` red       | `PanelPalette.red` (as today)                      |
+
+The running row's pulse dot is a small `PanelPalette.orange` circle with a
+gentle 1.8s pulse, honored `prefers-reduced-motion` (falls back to a static
+dot). It is the one animated element and marks *which* agent is live.
 
 Below the rows:
 - `+K done` line when the done tail is capped
