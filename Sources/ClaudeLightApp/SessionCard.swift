@@ -43,14 +43,26 @@ struct SessionCard: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                if let fraction = session.contextFraction {
-                    ContextTicks(fraction: fraction)
+                // Gauge and timer share a center-aligned sub-stack: the ticks
+                // carry no text baseline, so the row's .firstTextBaseline
+                // alignment would seat them by their bottom edge instead.
+                HStack(spacing: 5) {
+                    if let fraction = session.contextFraction {
+                        ContextTicks(fraction: fraction)
+                    }
+                    // The timer gets a reserved fixed-width slot: its text
+                    // width breathes as digits roll, and letting it push the
+                    // gauge around slides the tooltip region out from under a
+                    // hovering cursor, killing the tooltip mid-delay. Width
+                    // fits "365d".
+                    Text(timerText(for: session, now: now))
+                        .font(.system(size: 11, weight: needsYou(session.status) ? .semibold : .regular))
+                        .monospacedDigit()
+                        .foregroundStyle(needsYou(session.status)
+                                         ? AnyShapeStyle(PanelPalette.red)
+                                         : AnyShapeStyle(.secondary))
+                        .frame(width: 28, alignment: .trailing)
                 }
-                Text(timerText(for: session, now: now))
-                    .font(.system(size: 11, weight: needsYou(session.status) ? .semibold : .regular))
-                    .foregroundStyle(needsYou(session.status)
-                                     ? AnyShapeStyle(PanelPalette.red)
-                                     : AnyShapeStyle(.secondary))
             }
             if let subtitle = cardSubtitle(for: session, errorReason: errorReason) {
                 Text(subtitle)
