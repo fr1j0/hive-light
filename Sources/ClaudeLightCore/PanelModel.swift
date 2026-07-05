@@ -37,3 +37,26 @@ public func subagentChipText(_ list: SubagentList) -> String {
 public func accessibilityLabel(for session: Session) -> String {
     "\(displayName(for: session)) — \(friendlyStatusLabel(for: session.status))"
 }
+
+/// Urgency bands for the context gauge (#96).
+public enum ContextLevel: Equatable, Sendable {
+    case ok      // < 0.75
+    case warm    // 0.75 ..< 0.9 — auto-compact approaching
+    case hot     // >= 0.9
+}
+
+public func contextLevel(fraction: Double) -> ContextLevel {
+    if fraction >= 0.9 { return .hot }
+    if fraction >= 0.75 { return .warm }
+    return .ok
+}
+
+/// Lit ticks out of 5 — any measured usage lights at least one.
+public func contextSegments(fraction: Double) -> Int {
+    min(max(Int((fraction * 5).rounded(.up)), 1), 5)
+}
+
+/// Hover tooltip for the tick group — the one place the exact number lives.
+public func contextTooltip(fraction: Double) -> String {
+    "context \(Int((fraction * 100).rounded()))% used"
+}
