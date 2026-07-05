@@ -6,6 +6,17 @@ public enum HookAction: Equatable, Sendable {
     case ignore
 }
 
+/// Whether an event's handling needs the transcript in hand — the expensive
+/// read is worth it only here. `Stop` has always qualified (context usage +
+/// model re-read). `UserPromptSubmit` joins it so the model chip and context
+/// gauge re-read once at the start of each turn, self-healing a value frozen on
+/// a missed or raced Stop instead of staying stale for turns. `PreToolUse` is
+/// deliberately excluded: it fires per tool call and a full read each time is
+/// too costly, so it keeps the last measurement.
+public func eventCarriesTranscript(_ hookEventName: String) -> Bool {
+    hookEventName == "Stop" || hookEventName == "UserPromptSubmit"
+}
+
 public func action(for payload: HookPayload, transcriptJSONL: String? = nil) -> HookAction {
     switch payload.hookEventName {
     case "SessionStart":
