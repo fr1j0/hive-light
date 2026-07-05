@@ -6,7 +6,8 @@ enum PanelPalette {
     static let red = Color(red: 1.00, green: 0.23, blue: 0.19)
     static let orange = Color(red: 1.00, green: 0.58, blue: 0.00)
     static let green = Color(red: 0.20, green: 0.78, blue: 0.35)
-    static let branchAmber = Color(red: 1.00, green: 0.76, blue: 0.40)
+    // 70% opacity: a quiet ref label, not a status highlight.
+    static let branchAmber = Color(red: 1.00, green: 0.76, blue: 0.40).opacity(0.7)
 
     static func color(for status: SessionStatus) -> Color {
         switch status {
