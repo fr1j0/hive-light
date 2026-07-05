@@ -53,4 +53,23 @@ final class PanelModelTests: XCTestCase {
     func test_accessibilityLabel_matchesOldMenuRow() {
         XCTAssertEqual(accessibilityLabel(for: s(.waiting)), "vatios — waiting for permission")
     }
+
+    func test_contextSegments_boundaries() {
+        XCTAssertEqual(contextSegments(fraction: 0.01), 1)
+        XCTAssertEqual(contextSegments(fraction: 0.46), 3)
+        XCTAssertEqual(contextSegments(fraction: 0.75), 4)
+        XCTAssertEqual(contextSegments(fraction: 0.9), 5)
+        XCTAssertEqual(contextSegments(fraction: 1.0), 5)
+    }
+
+    func test_contextLevel_thresholds() {
+        XCTAssertEqual(contextLevel(fraction: 0.74), .ok)
+        XCTAssertEqual(contextLevel(fraction: 0.75), .warm)
+        XCTAssertEqual(contextLevel(fraction: 0.89), .warm)
+        XCTAssertEqual(contextLevel(fraction: 0.9), .hot)
+    }
+
+    func test_contextTooltip_wording() {
+        XCTAssertEqual(contextTooltip(fraction: 0.78), "context 78% used")
+    }
 }

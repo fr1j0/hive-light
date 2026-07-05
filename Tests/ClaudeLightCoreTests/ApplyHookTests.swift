@@ -135,4 +135,33 @@ final class ApplyHookTests: XCTestCase {
         XCTAssertEqual(s.status, .running)
         XCTAssertNil(s.detail)
     }
+
+    private let usageTranscript =
+        #"{"type":"assistant","message":{"role":"assistant","model":"claude-sonnet-5","usage":{"input_tokens":500000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0},"content":[{"type":"text","text":"x"}]}}"#
+
+    func test_stopWithTranscript_writesContextFraction() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil),
+                      to: store, now: now, transcriptJSONL: usageTranscript)
+        let s = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(try XCTUnwrap(s.contextFraction), 0.5, accuracy: 0.0001)
+    }
+
+    func test_transcriptlessEvent_preservesContextFraction() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil),
+                      to: store, now: now, transcriptJSONL: usageTranscript)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now.addingTimeInterval(1))
+        let s = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(s.status, .running)
+        XCTAssertEqual(try XCTUnwrap(s.contextFraction), 0.5, accuracy: 0.0001)
+    }
+
+    func test_freshSessionWithoutTranscript_nilFraction() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now)
+        XCTAssertNil(try store.loadAll().first?.contextFraction)
+    }
 }

@@ -25,11 +25,15 @@ public struct Session: Codable, Sendable, Equatable {
     /// question / ask sentence / permission message (#80). Set by the hook
     /// only for needs-you statuses; ≤140 chars.
     public var detail: String?
+    /// Context-window usage 0...1 measured at the last Stop (#96): the last
+    /// assistant entry's usage tokens over the model's window. Persists
+    /// across transcript-less events; nil until first measured.
+    public var contextFraction: Double?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
-                focusURL: String? = nil, detail: String? = nil) {
+                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -41,6 +45,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.termSessionId = termSessionId
         self.focusURL = focusURL
         self.detail = detail
+        self.contextFraction = contextFraction
     }
 
     enum CodingKeys: String, CodingKey {
@@ -55,6 +60,7 @@ public struct Session: Codable, Sendable, Equatable {
         case termSessionId = "term_session_id"
         case focusURL = "focus_url"
         case detail
+        case contextFraction = "context_fraction"
     }
 }
 

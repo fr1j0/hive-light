@@ -24,7 +24,11 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             termSessionId: existing?.termSessionId ?? terminal?.termSessionId,
             focusURL: existing?.focusURL ?? terminal?.focusURL,
             // Belt-and-braces: the ≤140 cap holds even if a future action path forgets it.
-            detail: detail.map(truncatedDetail)
+            detail: detail.map(truncatedDetail),
+            // Context usage refreshes only when a transcript is in hand (the
+            // Stop path); other events keep the last measurement (#96).
+            contextFraction: transcriptJSONL.flatMap { contextFraction(transcriptJSONL: $0) }
+                ?? existing?.contextFraction
         )
         try store.write(session)
     }

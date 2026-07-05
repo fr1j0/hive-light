@@ -43,6 +43,9 @@ struct SessionCard: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 Spacer(minLength: 8)
+                if let fraction = session.contextFraction {
+                    ContextTicks(fraction: fraction)
+                }
                 Text(timerText(for: session, now: now))
                     .font(.system(size: 11, weight: needsYou(session.status) ? .semibold : .regular))
                     .foregroundStyle(needsYou(session.status)
@@ -78,7 +81,8 @@ struct SessionCard: View {
         .onHover { hovering = $0 }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel([ClaudeLightCore.accessibilityLabel(for: session),
-                             cardSubtitle(for: session, errorReason: errorReason)]
+                             cardSubtitle(for: session, errorReason: errorReason),
+                             session.contextFraction.map { contextTooltip(fraction: $0) }]
                             .compactMap { $0 }.joined(separator: ". "))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { TerminalFocuser.focus(session) }
@@ -135,6 +139,34 @@ struct SubagentRows: View {
                     Rectangle().fill(Color.primary.opacity(0.15)).frame(width: 2)
                 }
             }
+        }
+    }
+}
+
+/// Five-tick context gauge (#96): lit count = usage, color = urgency.
+/// The exact percentage lives only in the tooltip.
+struct ContextTicks: View {
+    let fraction: Double
+
+    var body: some View {
+        let lit = contextSegments(fraction: fraction)
+        let color = Self.color(for: contextLevel(fraction: fraction))
+        HStack(spacing: 1.5) {
+            ForEach(0..<5, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(index < lit ? color : Color.primary.opacity(0.15))
+                    .frame(width: 4, height: 7)
+            }
+        }
+        .help(contextTooltip(fraction: fraction))
+        .accessibilityLabel(contextTooltip(fraction: fraction))
+    }
+
+    private static func color(for level: ContextLevel) -> Color {
+        switch level {
+        case .ok: return Color.secondary
+        case .warm: return PanelPalette.orange
+        case .hot: return PanelPalette.red
         }
     }
 }
