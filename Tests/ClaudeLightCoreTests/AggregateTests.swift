@@ -72,6 +72,4 @@ final class AggregateTests: XCTestCase {
         XCTAssertFalse(aggregateNeedsAttention([s(.handoff)]))
     }
 
-
-
 }

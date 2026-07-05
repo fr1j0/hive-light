@@ -82,5 +82,4 @@ extension MenuModelTests {
         XCTAssertEqual(order, ["waiting:w", "handoff:h", "running:r", "idle:z"])
     }
 
-
 }

@@ -30,12 +30,10 @@ final class PanelModelTests: XCTestCase {
         XCTAssertEqual(cardSubtitle(for: s(.error), errorReason: nil), "API error: api error")
     }
 
-
     func test_timerText_formatsAge() {
         XCTAssertEqual(timerText(for: s(.attention, ageSeconds: 720), now: now), "12m")
         XCTAssertEqual(timerText(for: s(.running, ageSeconds: 45), now: now), "45s")
     }
-
 
     func test_subagentChipText_pluralAndFailed() {
         let list = SubagentList(visible: [

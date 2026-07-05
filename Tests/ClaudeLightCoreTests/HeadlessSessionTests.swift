@@ -49,7 +49,6 @@ final class HeadlessSessionTests: XCTestCase {
         XCTAssertEqual(visibleSessions([session("a", .idle, tty: "ttys000")]).count, 1)
     }
 
-
     // MARK: – displayName
 
     func test_displayName_marksHeadlessAsBackground() {

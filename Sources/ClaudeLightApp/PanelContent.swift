@@ -9,12 +9,23 @@ import ClaudeLightCore
 struct PanelContent: View {
     @ObservedObject var watcher: SessionWatcher
     @State private var showingSettings = false
-    /// Past this many sessions the list scrolls at a fixed height so the
+    /// Past this estimated weight the list scrolls at a fixed height so the
     /// footer stays reachable. Below it, a plain stack hugs the content —
     /// the .window panel sizes to ideal height, and a bare ScrollView's
-    /// ideal is ~zero (it collapses; measuring back is a layout deadlock).
+    /// ideal is ~zero (it collapses; measuring back is a layout deadlock,
+    /// since a zero-height ScrollView never lays out its content).
     private static let scrollThreshold = 8
     private static let scrolledListHeight: CGFloat = 480
+
+    /// Deterministic pre-layout size estimate: one unit per session card,
+    /// with expanded subagent mini-rows (~1/3 card height each) folded in so
+    /// a few heavily fanned-out sessions can't outgrow the screen either.
+    private var estimatedRowWeight: Int {
+        let subagentRows = watcher.subagentsBySession.values.reduce(0) {
+            $0 + $1.visible.count + ($1.overflowRunning > 0 ? 1 : 0)
+        }
+        return watcher.sessions.count + subagentRows / 3
+    }
 
     var body: some View {
         Group {
@@ -42,7 +53,7 @@ struct PanelContent: View {
                 Divider()
             }
 
-            if watcher.sessions.count > Self.scrollThreshold {
+            if estimatedRowWeight > Self.scrollThreshold {
                 ScrollView {
                     sessionRows(now: now)
                 }
