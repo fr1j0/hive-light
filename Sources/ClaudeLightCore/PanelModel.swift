@@ -3,7 +3,8 @@ import Foundation
 // Pure derivations for the panel UI (#86) — every string the SwiftUI layer
 // renders verbatim, kept here so it is testable without a view hierarchy.
 
-/// Card title: the project display name. Branch labels join here when #82 lands.
+/// Card title: the project display name. The git branch renders in the
+/// subtitle (#82), never here — titles ran too long with it.
 public func cardTitle(for session: Session) -> String {
     displayName(for: session)
 }
