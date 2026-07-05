@@ -67,4 +67,26 @@ final class HookActionTests: XCTestCase {
         XCTAssertEqual(action(for: payload("Stop"), transcriptJSONL: jsonl),
                        .set(.handoff, detail: "Should I use approach A or B?"))
     }
+
+    // MARK: – Transcript-read cadence (model chip freeze fix)
+
+    func test_stop_carriesTranscript() {
+        XCTAssertTrue(eventCarriesTranscript("Stop"))
+    }
+
+    func test_userPromptSubmit_carriesTranscript() {
+        // Re-reading the model at the start of each turn self-heals a chip
+        // frozen on a missed/raced Stop, instead of staying stale for turns.
+        XCTAssertTrue(eventCarriesTranscript("UserPromptSubmit"))
+    }
+
+    func test_preToolUse_doesNotCarryTranscript() {
+        // PreToolUse fires per tool call; a full transcript read each time is
+        // too expensive, so it stays on the last measurement.
+        XCTAssertFalse(eventCarriesTranscript("PreToolUse"))
+    }
+
+    func test_notification_doesNotCarryTranscript() {
+        XCTAssertFalse(eventCarriesTranscript("Notification"))
+    }
 }

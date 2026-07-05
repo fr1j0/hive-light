@@ -228,4 +228,19 @@ final class ApplyHookTests: XCTestCase {
                       to: store, now: now)
         XCTAssertEqual(try store.loadAll().first?.model, "claude-fable-5")
     }
+
+    private let opusEntry = #"{"type":"assistant","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input_tokens":10}}}"#
+
+    /// The freeze fix: a UserPromptSubmit that carries a transcript re-reads the
+    /// model, advancing a value that a missed/raced Stop left stale — instead of
+    /// keeping the old one for turns (#model-chip-refresh).
+    func test_applyHook_userPromptSubmitWithTranscript_advancesStaleModel() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil),
+                      to: store, now: now, transcriptJSONL: modelEntry)
+        XCTAssertEqual(try store.loadAll().first?.model, "claude-fable-5")
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now.addingTimeInterval(1), transcriptJSONL: opusEntry)
+        XCTAssertEqual(try store.loadAll().first?.model, "claude-opus-4-8")
+    }
 }
