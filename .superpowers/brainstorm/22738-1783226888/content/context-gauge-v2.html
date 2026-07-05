@@ -1,0 +1,105 @@
+<h2>Context gauge v2 — anchored to the number, not the card</h2>
+<p class="subtitle">Full-width bars read as task progress. These keep the meter tiny and glued to the percentage in the card's trailing corner. Same sessions: 46% / 78% / 93%. Click one.</p>
+
+<style>
+  .panel {
+    width: 340px; background: #1e1f24; border-radius: 12px; padding: 8px;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size: 13px;
+    color: #e8e8ec; box-shadow: 0 8px 30px rgba(0,0,0,.45); margin: 0 auto;
+  }
+  .p-header { display:flex; align-items:center; gap:8px; padding: 6px 10px 8px; color:#9a9aa3; font-size:12px; }
+  .card { border-radius: 8px; padding: 8px 10px; background:#26272d; margin-bottom:5px; }
+  .cardtop { display:flex; gap:9px; align-items:baseline; }
+  .dot { width:9px; height:9px; border-radius:50%; flex:none; position:relative; top:1px; }
+  .red { background:#ff3b30; } .orange { background:#ff9500; }
+  .row-main { flex:1; min-width:0; }
+  .row-title { display:flex; justify-content:space-between; align-items:baseline; }
+  .proj { font-weight:600; }
+  .meta { color:#9a9aa3; font-size:11px; flex:none; margin-left:8px; display:inline-flex; align-items:center; gap:5px; }
+  .warm { color:#ffb340 !important; font-weight:600; } .hot { color:#ff6b61 !important; font-weight:600; }
+  .detailline { color:#b9b9c2; font-size:12px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:18px; }
+  .mini { width:26px; height:4px; border-radius:2px; background:#3a3b42; display:inline-block; position:relative; top:0px; }
+  .mini > i { display:block; height:100%; border-radius:2px; }
+  .f-ok { background:#77777f; } .f-warm { background:#ffb340; } .f-hot { background:#ff6b61; }
+  .segs { display:inline-flex; gap:1.5px; }
+  .segs i { width:4px; height:7px; border-radius:1px; background:#3a3b42; display:inline-block; }
+  .segs i.on-ok { background:#77777f; } .segs i.on-warm { background:#ffb340; } .segs i.on-hot { background:#ff6b61; }
+  .p-divider { height:1px; background:#33343a; margin:6px 4px; }
+  .p-footer { display:flex; justify-content:space-between; align-items:center; padding:4px 10px 2px; color:#9a9aa3; font-size:11px; }
+</style>
+
+<div class="options">
+
+  <div class="option" data-choice="minibar-always" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Inline mini-bar, always visible</h3>
+      <p>26px meter + percentage in the trailing corner, every card. You always know every session's runway; slight constant chrome.</p>
+      <div class="mockup"><div class="mockup-body" style="background:#111; padding:18px;">
+        <div class="panel">
+          <div class="p-header"><span style="color:#ffb340">●</span> 2 working · 1 needs you</div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">claude-light</span><span class="meta"><span class="mini"><i class="f-ok" style="width:46%"></i></span>46% · 3m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">vatios</span><span class="meta"><span class="mini"><i class="f-warm" style="width:78%"></i></span><span class="warm">78%</span> · 41m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot red"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">omega</span><span class="meta"><span class="mini"><i class="f-hot" style="width:93%"></i></span><span class="hot">93%</span> · 1h</span></div>
+            <div class="detailline">Which migration order should I use?</div></div></div></div>
+          <div class="p-divider"></div>
+          <div class="p-footer"><span>⚙︎ Settings</span><span>Claude Light v0.13.2 · ⏻</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="segments" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Segment ticks (signal-bar style)</h3>
+      <p>Five discrete ticks — reads as a capacity level like Wi-Fi bars, impossible to mistake for progress. Less precise than a bar.</p>
+      <div class="mockup"><div class="mockup-body" style="background:#111; padding:18px;">
+        <div class="panel">
+          <div class="p-header"><span style="color:#ffb340">●</span> 2 working · 1 needs you</div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">claude-light</span><span class="meta"><span class="segs"><i class="on-ok"></i><i class="on-ok"></i><i></i><i></i><i></i></span>46% · 3m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">vatios</span><span class="meta"><span class="segs"><i class="on-warm"></i><i class="on-warm"></i><i class="on-warm"></i><i class="on-warm"></i><i></i></span><span class="warm">78%</span> · 41m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot red"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">omega</span><span class="meta"><span class="segs"><i class="on-hot"></i><i class="on-hot"></i><i class="on-hot"></i><i class="on-hot"></i><i class="on-hot"></i></span><span class="hot">93%</span> · 1h</span></div>
+            <div class="detailline">Which migration order should I use?</div></div></div></div>
+          <div class="p-divider"></div>
+          <div class="p-footer"><span>⚙︎ Settings</span><span>Claude Light v0.13.2 · ⏻</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="minibar-quiet" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Inline mini-bar, quiet until ~75%</h3>
+      <p>Below the threshold the card shows only the timer — no gauge at all. Past it, the tinted mini-bar + percentage appear. Cleanest day-to-day; runway invisible while it doesn't matter.</p>
+      <div class="mockup"><div class="mockup-body" style="background:#111; padding:18px;">
+        <div class="panel">
+          <div class="p-header"><span style="color:#ffb340">●</span> 2 working · 1 needs you</div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">claude-light</span><span class="meta">3m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot orange"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">vatios</span><span class="meta"><span class="mini"><i class="f-warm" style="width:78%"></i></span><span class="warm">78%</span> · 41m</span></div>
+            <div class="detailline">running</div></div></div></div>
+          <div class="card"><div class="cardtop"><span class="dot red"></span>
+            <div class="row-main"><div class="row-title"><span class="proj">omega</span><span class="meta"><span class="mini"><i class="f-hot" style="width:93%"></i></span><span class="hot">93%</span> · 1h</span></div>
+            <div class="detailline">Which migration order should I use?</div></div></div></div>
+          <div class="p-divider"></div>
+          <div class="p-footer"><span>⚙︎ Settings</span><span>Claude Light v0.13.2 · ⏻</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+</div>

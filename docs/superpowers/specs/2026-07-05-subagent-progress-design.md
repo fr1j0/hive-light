@@ -52,10 +52,20 @@ queued-message case.
 
 Consequences:
 - Mid-fan-out, the count reflects only this prompt's batch.
-- The struck-through record persists **until your next prompt**. Typing the next
-  message is the acknowledgment that clears the settled record — the same
-  "your next prompt is the ack" principle already used for failures, consistent
-  with the app's "routine transitions stay quiet" ethos.
+- If a queued user prompt lands *mid-turn* while agents are still running, the
+  settled (done + failed) agents from before it clear, so the count re-bases on
+  the new sub-batch — the same "your next prompt is the ack" principle already
+  used for failures.
+
+**Visible lifetime — turn-end, not next-prompt.** `SessionWatcher.reload()`
+computes subagents only for sessions with `status == .running` (line 140); this
+feature does **not** change that. So the block is live during the fan-out (the
+count climbs `0 → 5 of 5`) and stays through the main agent wrapping up the
+turn, then disappears when the turn ends and the session goes idle. The
+clear-on-prompt rule above still governs the *within-turn* queued-prompt case;
+the post-turn idle lingering (record visible until the next prompt) is
+explicitly out of scope. This keeps the scan cost unchanged (running sessions
+only) at the cost of the record not surviving turn-end.
 
 ### Emit done agents
 
