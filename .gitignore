@@ -3,3 +3,9 @@
 build/
 *.xcuserstate
 dist/
+
+# Local tool state, never shipped
+.bitacora/
+.superpowers/
+.vscode/
+developer_log.json

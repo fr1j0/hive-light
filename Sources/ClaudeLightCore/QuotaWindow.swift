@@ -75,7 +75,11 @@ private let blockLength: TimeInterval = 5 * 3600
 /// forward from the anchor; only entries inside the current block count.
 /// Nil when the newest entry is older than 5h (no active window).
 public func quotaWindow(events: [UsageEvent], now: Date) -> QuotaWindow? {
-    let sorted = events.sorted { $0.time < $1.time }
+    // Clock skew: future-dated entries clamp to now so they can't anchor
+    // a not-yet-started block and blank the gauge (spec: skew → zero).
+    let sorted = events
+        .map { $0.time > now ? UsageEvent(time: now, tokens: $0.tokens, model: $0.model, source: $0.source) : $0 }
+        .sorted { $0.time < $1.time }
     guard let newest = sorted.last?.time,
           now.timeIntervalSince(newest) < blockLength else { return nil }
 
@@ -131,8 +135,9 @@ public func countdownText(until reset: Date, now: Date) -> String {
 
 /// "2.4M" / "890k" / "12k" / "950".
 public func tokenText(_ tokens: Double) -> String {
-    if tokens >= 1_000_000 { return String(format: "%.1fM", tokens / 1_000_000) }
-    if tokens >= 1_000 { return "\(Int((tokens / 1_000).rounded()))k" }
+    let thousands = (tokens / 1_000).rounded()
+    if thousands >= 1_000 { return String(format: "%.1fM", tokens / 1_000_000) }
+    if tokens >= 1_000 { return "\(Int(thousands))k" }
     return "\(Int(tokens.rounded()))"
 }
 

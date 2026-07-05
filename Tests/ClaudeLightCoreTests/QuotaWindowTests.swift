@@ -102,6 +102,14 @@ final class QuotaWindowTests: XCTestCase {
         XCTAssertEqual(w.start, iso("2026-07-05T12:00:00Z"))
     }
 
+    func test_futureTimestamps_clampToNow_windowSurvives() throws {
+        let w = try XCTUnwrap(quotaWindow(
+            events: [ev("2026-07-05T12:00:00Z"), ev("2026-07-05T12:45:00Z")],
+            now: iso("2026-07-05T12:30:00Z")))
+        XCTAssertEqual(w.start, iso("2026-07-05T12:00:00Z"))
+        XCTAssertEqual(w.tokens, 200)  // the future entry clamps in, not out
+    }
+
     func test_modelsShortNamed_firstAppearanceOrder_distinctSources() throws {
         let w = try XCTUnwrap(quotaWindow(
             events: [ev("2026-07-05T12:00:00Z", model: "claude-fable-5", source: "a"),
@@ -133,6 +141,11 @@ final class QuotaWindowTests: XCTestCase {
         XCTAssertEqual(tokenText(890_000), "890k")
         XCTAssertEqual(tokenText(12_345), "12k")
         XCTAssertEqual(tokenText(950), "950")
+    }
+
+    func test_tokenText_boundaryPromotesToM() {
+        XCTAssertEqual(tokenText(999_500), "1.0M")
+        XCTAssertEqual(tokenText(999_499), "999k")
     }
 
     func test_quotaTooltip_composition() {
