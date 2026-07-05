@@ -32,11 +32,14 @@ public struct Session: Codable, Sendable, Equatable {
     /// Git branch of the session's cwd at the last hook event (#82); nil for
     /// non-repos, detached HEAD, and sessions written by older hooks.
     public var branch: String?
+    /// Model id of the session's last assistant turn (#105); nil until a
+    /// transcript-bearing event, and for sessions written by older hooks.
+    public var model: String?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
-                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil) {
+                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil, model: String? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -50,6 +53,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.detail = detail
         self.contextFraction = contextFraction
         self.branch = branch
+        self.model = model
     }
 
     enum CodingKeys: String, CodingKey {
@@ -66,6 +70,7 @@ public struct Session: Codable, Sendable, Equatable {
         case detail
         case contextFraction = "context_fraction"
         case branch
+        case model
     }
 }
 

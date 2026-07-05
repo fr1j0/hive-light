@@ -208,4 +208,24 @@ final class ApplyHookTests: XCTestCase {
                       to: store, now: now)
         XCTAssertEqual(try store.loadAll().first?.branch, "main")
     }
+
+    // MARK: – Model persistence (#105)
+
+    private let modelEntry = #"{"type":"assistant","message":{"role":"assistant","model":"claude-fable-5","usage":{"input_tokens":10}}}"#
+
+    func test_applyHook_capturesModel_fromTranscript() throws {
+        let store = tempStore()
+        let p = HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil)
+        try applyHook(p, to: store, now: now, transcriptJSONL: modelEntry)
+        XCTAssertEqual(try store.loadAll().first?.model, "claude-fable-5")
+    }
+
+    func test_applyHook_keepsModel_whenNoTranscript() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil),
+                      to: store, now: now, transcriptJSONL: modelEntry)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.model, "claude-fable-5")
+    }
 }
