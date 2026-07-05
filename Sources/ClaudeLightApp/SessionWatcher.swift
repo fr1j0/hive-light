@@ -171,9 +171,8 @@ final class SessionWatcher: ObservableObject {
         // toggle is off, so enabling it never replays old transitions.
         if let previous = lastStatuses, notifyOnNeedsYou {
             for session in newlyNeedingYou(previous: previous, current: sorted) {
-                let body = session.status == .error
-                    ? "API error: \(reasons[session.sessionID] ?? "api error")"
-                    : (session.detail ?? friendlyStatusLabel(for: session.status))
+                let body = cardSubtitle(for: session, errorReason: reasons[session.sessionID])
+                    ?? friendlyStatusLabel(for: session.status)
                 notifier.post(project: session.project, body: body, sessionID: session.sessionID)
             }
         }

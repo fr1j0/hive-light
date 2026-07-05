@@ -98,8 +98,11 @@ struct SessionCard: View {
         .onTapGesture { TerminalFocuser.focus(session) }
         .onHover { hovering = $0 }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(ClaudeLightCore.accessibilityLabel(for: session))
+        .accessibilityLabel([ClaudeLightCore.accessibilityLabel(for: session),
+                             cardSubtitle(for: session, errorReason: errorReason)]
+                            .compactMap { $0 }.joined(separator: ". "))
         .accessibilityAddTraits(.isButton)
+        .accessibilityAction { TerminalFocuser.focus(session) }
     }
 }
 
@@ -124,7 +127,6 @@ struct SubagentRows: View {
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(collapsed ? "expand subagents" : "collapse subagents")
 
             if !collapsed {
                 VStack(alignment: .leading, spacing: 2) {

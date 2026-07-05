@@ -36,20 +36,26 @@ struct PanelContent: View {
                 Divider()
             }
 
-            if watcher.sessions.isEmpty {
-                Text("No active Claude Code sessions")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-            } else {
-                ForEach(watcher.sessions, id: \.sessionID) { session in
-                    SessionCard(session: session,
-                                errorReason: watcher.errorReasons[session.sessionID],
-                                subagents: watcher.subagentsBySession[session.sessionID],
-                                now: now)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    if watcher.sessions.isEmpty {
+                        Text("No active Claude Code sessions")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                    } else {
+                        ForEach(watcher.sessions, id: \.sessionID) { session in
+                            SessionCard(session: session,
+                                        errorReason: watcher.errorReasons[session.sessionID],
+                                        subagents: watcher.subagentsBySession[session.sessionID],
+                                        now: now)
+                        }
+                    }
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxHeight: 480)
 
             // Stats strip (#83) docks between this divider and the footer.
             Divider()
