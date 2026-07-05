@@ -41,4 +41,19 @@ final class SessionTests: XCTestCase {
         XCTAssertTrue(json.contains("\"status\":\"handoff\""))
         XCTAssertEqual(try ClaudeLightJSON.decoder.decode(Session.self, from: data), s)
     }
+
+    func test_branch_roundTrips() throws {
+        let s = Session(sessionID: "b1", status: .running, project: "p", cwd: "/x",
+                        updatedAt: Date(timeIntervalSince1970: 1_719_745_200),
+                        branch: "feat/labels")
+        let data = try ClaudeLightJSON.encoder.encode(s)
+        let back = try ClaudeLightJSON.decoder.decode(Session.self, from: data)
+        XCTAssertEqual(back.branch, "feat/labels")
+    }
+
+    func test_sessionJSON_withoutBranchKey_decodes() throws {
+        let json = #"{"session_id":"b2","status":"idle","project":"p","cwd":"/x","updated_at":"2026-07-05T08:00:00Z"}"#
+        let s = try ClaudeLightJSON.decoder.decode(Session.self, from: Data(json.utf8))
+        XCTAssertNil(s.branch)
+    }
 }
