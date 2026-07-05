@@ -4,10 +4,10 @@ import XCTest
 final class HeadlessSessionTests: XCTestCase {
     private func session(_ id: String, _ status: SessionStatus,
                          tty: String? = nil, focusURL: String? = nil,
-                         termProgram: String? = nil) -> Session {
+                         termProgram: String? = nil, branch: String? = nil) -> Session {
         Session(sessionID: id, status: status, project: "p", cwd: "/x/p",
                 updatedAt: Date(timeIntervalSince1970: 1_719_745_200),
-                termProgram: termProgram, tty: tty, focusURL: focusURL)
+                termProgram: termProgram, tty: tty, focusURL: focusURL, branch: branch)
     }
 
     // MARK: – isHeadless (#64)
@@ -56,6 +56,20 @@ final class HeadlessSessionTests: XCTestCase {
     }
 
     func test_displayName_plainForTerminalSessions() {
+        XCTAssertEqual(displayName(for: session("a", .running, tty: "ttys006")), "p")
+    }
+
+    func test_displayName_appendsBranch() {
+        XCTAssertEqual(displayName(for: session("a", .running, tty: "ttys006", branch: "feat/x")),
+                       "p — feat/x")
+    }
+
+    func test_displayName_branchThenBackgroundSuffix() {
+        XCTAssertEqual(displayName(for: session("a", .running, branch: "main")),
+                       "p — main (background)")
+    }
+
+    func test_displayName_noBranch_unchanged() {
         XCTAssertEqual(displayName(for: session("a", .running, tty: "ttys006")), "p")
     }
 }
