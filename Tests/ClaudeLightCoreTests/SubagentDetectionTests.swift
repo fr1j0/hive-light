@@ -44,7 +44,7 @@ final class SubagentDetectionTests: XCTestCase {
         let t = toolUse("t1", "Review Task 4")
         let list = subagents(fromTranscript: t)
         XCTAssertEqual(list.visible, [Subagent(id: "t1", label: "Review Task 4", state: .running)])
-        XCTAssertEqual(list.overflowRunning, 0)
+        XCTAssertEqual(list.total, 1)
     }
 
     func test_toolResultIsErrorTrue_isFailed() {
@@ -103,22 +103,19 @@ final class SubagentDetectionTests: XCTestCase {
         XCTAssertEqual(list.visible.map(\.id), ["n1", "n2", "n3"])
     }
 
-    func test_rowCap_keepsFailedAndRunning_collapsesDoneTail() {
-        // 1 failed + 2 running + 7 done, cap 6 → 1+2+3 = 6 rows, +4 done overflow.
+    func test_allAgentsShown_noCap_inDispatchOrder() {
+        // 1 failed + 2 running + 7 done → all 10 shown, dispatch order preserved.
         var lines = [toolUse("f", "fail"), toolResult("f", isError: true),
                      toolUse("r1", "run 1"), toolUse("r2", "run 2")]
         for i in 1...7 { lines += [toolUse("d\(i)", "done \(i)"), toolResult("d\(i)", isError: false)] }
-        let list = subagents(fromTranscript: join(lines), maxRows: 6)
-        XCTAssertEqual(list.visible.count, 6)
-        XCTAssertEqual(list.overflowDone, 4)
-        XCTAssertEqual(list.overflowRunning, 0)
+        let list = subagents(fromTranscript: join(lines))
+        XCTAssertEqual(list.visible.count, 10)
         XCTAssertEqual(list.total, 10)
         XCTAssertEqual(list.doneCount, 7)
         XCTAssertEqual(list.failedCount, 1)
-        // Failed + both running always survive the cap.
-        XCTAssertEqual(list.visible.filter { $0.state == .failed }.count, 1)
+        XCTAssertEqual(list.visible.map(\.id),
+                       ["f", "r1", "r2", "d1", "d2", "d3", "d4", "d5", "d6", "d7"])
         XCTAssertEqual(list.visible.filter { $0.state == .running }.count, 2)
-        XCTAssertEqual(list.visible.filter { $0.state == .done }.count, 3)
     }
 
     func test_agentToolUse_isAlsoRecognized() {
@@ -132,36 +129,13 @@ final class SubagentDetectionTests: XCTestCase {
         XCTAssertTrue(subagents(fromTranscript: bash).visible.isEmpty)
     }
 
-    func test_runningCap_capsAtMaxRows_withOverflowCount() {
-        let lines = (1...8).map { toolUse("r\($0)", "subagent \($0)") }
-        let list = subagents(fromTranscript: join(lines), maxRows: 5)
-        XCTAssertEqual(list.visible.count, 5)
-        XCTAssertEqual(list.overflowRunning, 3)
-        XCTAssertEqual(list.visible.map(\.id), ["r1", "r2", "r3", "r4", "r5"])
-        XCTAssertEqual(list.total, 8)
-    }
-
-    func test_failedNotCapped_alwaysShown() {
-        // 6 failed with cap 5 → all failed still visible (never dropped), no overflow.
-        let lines = (1...6).flatMap { [toolUse("f\($0)", "f\($0)"), toolResult("f\($0)", isError: true)] }
-        let list = subagents(fromTranscript: join(lines), maxRows: 5)
-        XCTAssertEqual(list.visible.count, 6)
-        XCTAssertEqual(list.failedCount, 6)
-        XCTAssertEqual(list.overflowRunning, 0)
-        XCTAssertEqual(list.overflowDone, 0)
-    }
-
-    func test_bothRunningAndDoneOverflow_inOneBatch() {
-        var lines = (1...8).map { toolUse("r\($0)", "run \($0)") }
-        for i in 1...3 { lines += [toolUse("d\(i)", "done \(i)"), toolResult("d\(i)", isError: false)] }
-        let list = subagents(fromTranscript: join(lines), maxRows: 6)
-        XCTAssertEqual(list.visible.count, 6)
-        XCTAssertEqual(list.visible.allSatisfy { $0.state == .running }, true)
-        XCTAssertEqual(list.overflowRunning, 2)
-        XCTAssertEqual(list.overflowDone, 3)
-        XCTAssertEqual(list.total, 11)
-        XCTAssertEqual(list.doneCount, 3)
-        XCTAssertEqual(list.failedCount, 0)
+    func test_largeFanout_allShown_noCap() {
+        // A 20-agent fan-out shows all 20 rows — no cap, no overflow.
+        let lines = (1...20).map { toolUse("r\($0)", "subagent \($0)") }
+        let list = subagents(fromTranscript: join(lines))
+        XCTAssertEqual(list.visible.count, 20)
+        XCTAssertEqual(list.total, 20)
+        XCTAssertEqual(list.visible.map(\.state), Array(repeating: .running, count: 20))
     }
 
     func test_longDescription_isTruncated() {

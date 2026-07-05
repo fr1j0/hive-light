@@ -38,15 +38,13 @@ final class PanelModelTests: XCTestCase {
     }
 
     func test_subagentChipText_countAndFailed() {
-        let list = SubagentList(visible: [], total: 5, doneCount: 3, failedCount: 1,
-                                overflowRunning: 0, overflowDone: 0)
-        XCTAssertEqual(subagentChipText(list), "⑂ 3 of 5 done · 1 failed")
+        let list = SubagentList(visible: [], total: 5, doneCount: 3, failedCount: 1)
+        XCTAssertEqual(subagentChipText(list), "3 of 5 done · 1 failed")
     }
 
     func test_subagentChipText_countNoFailures() {
-        let list = SubagentList(visible: [], total: 5, doneCount: 3, failedCount: 0,
-                                overflowRunning: 0, overflowDone: 0)
-        XCTAssertEqual(subagentChipText(list), "⑂ 3 of 5 done")
+        let list = SubagentList(visible: [], total: 5, doneCount: 3, failedCount: 0)
+        XCTAssertEqual(subagentChipText(list), "3 of 5 done")
     }
 
     func test_accessibilityLabel_matchesOldMenuRow() {

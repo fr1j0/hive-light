@@ -37,9 +37,9 @@ public func timerText(for session: Session, now: Date) -> String {
     relativeTime(secondsAgo: now.timeIntervalSince(session.updatedAt))
 }
 
-/// Collapsed-subagents chip: "⑂ 3 of 5 done" (· K failed when any failed).
+/// Collapsed-subagents chip: "3 of 5 done" (· K failed when any failed).
 public func subagentChipText(_ list: SubagentList) -> String {
-    let base = "⑂ \(list.doneCount) of \(list.total) done"
+    let base = "\(list.doneCount) of \(list.total) done"
     return list.failedCount > 0 ? "\(base) · \(list.failedCount) failed" : base
 }
 

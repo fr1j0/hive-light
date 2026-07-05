@@ -14,31 +14,24 @@ public struct Subagent: Equatable, Sendable {
     }
 }
 
-/// The subagents to display for a session's current fan-out: capped display
-/// rows plus exact batch counts and the per-kind overflow hidden by the cap.
+/// The subagents to display for a session's current fan-out: every agent in
+/// dispatch order plus exact batch counts. No cap — the panel shows the whole
+/// list and scrolls if the card grows tall.
 public struct SubagentList: Equatable, Sendable {
     public let visible: [Subagent]
     public let total: Int          // N — every dispatched agent in the batch
-    public let doneCount: Int      // X in "X of N done" — exact, cap-independent
-    public let failedCount: Int    // exact, cap-independent
-    public let overflowRunning: Int
-    public let overflowDone: Int
+    public let doneCount: Int      // X in "X of N done"
+    public let failedCount: Int
 
-    public init(visible: [Subagent], total: Int, doneCount: Int,
-                failedCount: Int, overflowRunning: Int, overflowDone: Int) {
+    public init(visible: [Subagent], total: Int, doneCount: Int, failedCount: Int) {
         self.visible = visible
         self.total = total
         self.doneCount = doneCount
         self.failedCount = failedCount
-        self.overflowRunning = overflowRunning
-        self.overflowDone = overflowDone
     }
 
-    public static let empty = SubagentList(visible: [], total: 0, doneCount: 0,
-                                           failedCount: 0, overflowRunning: 0, overflowDone: 0)
-    public var isEmpty: Bool {
-        visible.isEmpty && overflowRunning == 0 && overflowDone == 0
-    }
+    public static let empty = SubagentList(visible: [], total: 0, doneCount: 0, failedCount: 0)
+    public var isEmpty: Bool { visible.isEmpty }
 }
 
 /// Pairs `Agent`/`Task` tool_use blocks with their tool_results in a parent
@@ -54,12 +47,9 @@ public struct SubagentList: Equatable, Sendable {
 /// batch; running agents survive the prompt (a queued message can land while
 /// work is still in flight).
 ///
-/// Row cap: failed subagents are always shown and never dropped, even past
-/// `maxRows`. Running subagents fill the remaining budget; done subagents
-/// fill whatever's left after that. Overflow past the cap is reported per
-/// kind as `overflowRunning`/`overflowDone`. Defensive/fail-safe: unparseable
-/// lines are skipped.
-public func subagents(fromTranscript jsonl: String, maxRows: Int = 6) -> SubagentList {
+/// All agents in the batch are returned in dispatch order — the panel shows
+/// the whole list. Defensive/fail-safe: unparseable lines are skipped.
+public func subagents(fromTranscript jsonl: String) -> SubagentList {
     struct Pending { let id: String; let label: String }
     var order: [Pending] = []
     var seen = Set<String>()
@@ -101,54 +91,16 @@ public func subagents(fromTranscript jsonl: String, maxRows: Int = 6) -> Subagen
         }
     }
 
-    // Classify in dispatch order.
+    // Classify each agent in dispatch order; every one is shown.
     func state(of p: Pending) -> Subagent.State {
         guard let isError = errored[p.id] else { return .running }
         return isError ? .failed : .done
     }
-    let total = order.count
-    let doneCount = order.filter { state(of: $0) == .done }.count
-    let failedCount = order.filter { state(of: $0) == .failed }.count
-
-    // Row-cap budget: failed always shown (never dropped, even past the cap);
-    // running fill the remaining budget; done fill what's left. Counts are
-    // decided in a pre-pass so the done budget is correct regardless of how
-    // running/done interleave in dispatch order; a second pass emits the kept
-    // rows in dispatch order.
-    let runningCount = total - doneCount - failedCount
-    // Failed agents are never dropped and consume budget first; if failures alone
-    // meet or exceed maxRows, running work is pushed entirely into the overflow
-    // line. Rare (6+ concurrent failures) and acceptable — failures are the signal.
-    let runningBudget = max(0, maxRows - failedCount)
-    let runningShown = min(runningCount, runningBudget)
-    let doneBudget = max(0, maxRows - failedCount - runningShown)
-    let doneShown = min(doneCount, doneBudget)
-
-    var runningPlaced = 0
-    var donePlaced = 0
-    var visible: [Subagent] = []
-    for p in order {
-        switch state(of: p) {
-        case .failed:
-            visible.append(Subagent(id: p.id, label: p.label, state: .failed))
-        case .running:
-            if runningPlaced < runningShown {
-                visible.append(Subagent(id: p.id, label: p.label, state: .running))
-                runningPlaced += 1
-            }
-        case .done:
-            if donePlaced < doneShown {
-                visible.append(Subagent(id: p.id, label: p.label, state: .done))
-                donePlaced += 1
-            }
-        }
-    }
+    let visible = order.map { Subagent(id: $0.id, label: $0.label, state: state(of: $0)) }
     return SubagentList(
         visible: visible,
-        total: total,
-        doneCount: doneCount,
-        failedCount: failedCount,
-        overflowRunning: runningCount - runningShown,
-        overflowDone: doneCount - doneShown
+        total: visible.count,
+        doneCount: visible.filter { $0.state == .done }.count,
+        failedCount: visible.filter { $0.state == .failed }.count
     )
 }

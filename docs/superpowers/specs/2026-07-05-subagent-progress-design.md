@@ -79,33 +79,29 @@ list never reorders under the cursor. Matches the terminal's behavior.
 
 ### Counts on `SubagentList`
 
-`SubagentList` carries the batch totals so the UI renders `X of N` without
-re-deriving from (possibly capped) rows:
+`SubagentList` carries every agent in the batch (in dispatch order) plus the
+batch totals:
 
 ```
 struct SubagentList {
-    let visible: [Subagent]   // capped display rows (see Row cap)
+    let visible: [Subagent]   // ALL agents, dispatch order — no cap
     let total: Int            // N — all agents in the batch
     let doneCount: Int        // X — settled-successful in the batch
     let failedCount: Int      // for the "· K failed" annotation
-    let overflowDone: Int     // done agents collapsed by the row cap
-    let overflowRunning: Int  // running agents collapsed by the row cap
 }
 ```
 
-`total`, `doneCount`, and `failedCount` are **exact** regardless of the row cap.
+## Show all — no cap
 
-## Row cap
+**Every subagent is shown**, whatever its state (running / done / failed). The
+row cap was tried during live testing and rejected: hiding completed agents
+behind a `+K done` counter defeated the point — you want to *see* the record
+build, not a number. So there is no data-level cap; `visible` is the whole
+batch.
 
-A large fan-out must not balloon the panel. When expanded:
-
-- **Cap at 6 visible rows.** Priority order: **failed → running → done**.
-  Failures and live work always surface; the quiet done tail is the first to
-  collapse.
-- The collapsed done tail becomes a **`+K done`** line; any collapsed running
-  agents remain a **`+M more running`** line (as today).
-- The header/collapsed `X of N` count is unaffected by the cap — it always
-  reflects the true batch.
+Large fan-outs are bounded in the **view**, not the data (see Rendering): past
+~8 rows the block scrolls internally so the card can't balloon, but every agent
+stays reachable.
 
 ## Rendering (`SubagentRows` in `SessionCard.swift`)
 
@@ -113,26 +109,31 @@ A large fan-out must not balloon the panel. When expanded:
 
 Shown when the block is collapsed (the block still defaults to *expanded*, as
 today — `subagentsCollapsed = false` is unchanged). Replaces today's
-`⑂ 4 subagents`:
+`⑂ 4 subagents`. The `⑂` fork glyph is dropped — it has no glyph in the system
+font and rendered as a broken placeholder:
 
-- `⑂ 3 of 5 done`
-- with failures: `⑂ 3 of 5 done · 1 failed`
+- `3 of 5 done`
+- with failures: `3 of 5 done · 1 failed`
 
 ### Expanded rows (dispatch order, stable in place)
 
-| State   | Mark          | Style                                              |
-|---------|---------------|----------------------------------------------------|
-| done    | `✓` tertiary  | `.tertiary`, strikethrough (dimmed settled tail)   |
-| running | orange pulse dot | `.secondary` — brighter than done, so live work reads at a glance against the struck tail |
-| failed  | `✗` red       | `PanelPalette.red` (as today)                      |
+| State   | Mark             | Style                                                                       |
+|---------|------------------|-----------------------------------------------------------------------------|
+| done    | `✓` pale green   | `PanelPalette.green.opacity(0.7)` tick + `.tertiary` strikethrough label    |
+| running | orange pulse dot | `.secondary` — brighter than done, so live work reads against the struck tail |
+| failed  | `✗` red          | `PanelPalette.red` (as today)                                               |
 
-The running row's pulse dot is a small `PanelPalette.orange` circle with a
-gentle 1.8s pulse, honored `prefers-reduced-motion` (falls back to a static
-dot). It is the one animated element and marks *which* agent is live.
+The done tick is **pale green** (a muted success hue, pairing with the red `✗`
+for failures) while the label stays dimmed/struck so the settled record reads
+quietly. The running row's pulse dot is a small `PanelPalette.orange` circle
+with a gentle pulse, honoring `prefers-reduced-motion` (static fallback) — the
+one animated element, marking *which* agent is live.
 
-Below the rows:
-- `+K done` line when the done tail is capped
-- `+M more running` line when running agents are capped (existing behavior)
+**Bounding large fan-outs:** the expanded rows lay out inline up to
+`maxInlineRows` (8). Beyond that the block is wrapped in a `ScrollView` with a
+fixed height (~8 rows) so it scrolls internally rather than growing the card.
+The height is set *explicitly* — a bare ScrollView collapses the panel's
+ideal-height sizing.
 
 The expanded header keeps the `X of N done` count visible above the rows so the
 progress signal is present whether collapsed or expanded.
@@ -148,8 +149,8 @@ Unit tests target `subagents(fromTranscript:)` — pure function over JSONL:
   from the count; a running agent carried across a queued prompt survives.
 - **Denominator reset:** old-batch done + new-batch dispatch → count reflects
   only the new batch (`1 of 3`, not `6 of 8`).
-- **Row cap priority:** a 10-agent batch caps at ~6 rows keeping failed+running,
-  collapsing done into `overflowDone`; counts stay exact.
+- **Show all:** a 10-agent mixed batch returns all 10 rows in dispatch order; a
+  20-agent batch returns all 20 (no cap, no overflow fields).
 - **Stable ordering:** rows stay in dispatch order as agents complete.
 - **Fail-safe:** unparseable lines skipped (existing guarantee preserved).
 
@@ -158,7 +159,11 @@ extended clear-on-prompt rule.
 
 ## Files touched
 
-- `Sources/ClaudeLightCore/SubagentDetection.swift` — state, scoping, counts, cap
-- `Sources/ClaudeLightApp/SessionCard.swift` — `SubagentRows` chip + rows
-- Chip text helper (`subagentChipText`) — new `X of N done` format
+- `Sources/ClaudeLightCore/SubagentDetection.swift` — `.done` state, batch
+  scoping, counts (no cap — all agents returned)
+- `Sources/ClaudeLightApp/SessionCard.swift` — `SubagentRows`: chip, per-state
+  rows, pale-green tick, internal scroll past 8 rows
+- `Sources/ClaudeLightApp/PanelContent.swift` — panel-height estimate (caps a
+  scrolled block's contribution)
+- Chip text helper (`subagentChipText`) — `X of N done` format, no glyph
 - Corresponding test files
