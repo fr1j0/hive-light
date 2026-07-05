@@ -42,14 +42,13 @@ struct PanelContent: View {
 
     @ViewBuilder
     private func sessionList(now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
             if let summary = watcher.summary {
                 HStack(spacing: 8) {
                     Circle().fill(headerColor).frame(width: 8, height: 8)
                     Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 10)
-                .padding(.top, 4)
                 Divider()
             }
 
@@ -66,7 +65,7 @@ struct PanelContent: View {
             Divider()
             footer
         }
-        .padding(8)
+        .padding(12)
     }
 
     @ViewBuilder
@@ -119,7 +118,6 @@ struct PanelContent: View {
             .accessibilityLabel("Quit Claude Light")
         }
         .padding(.horizontal, 10)
-        .padding(.bottom, 2)
     }
 
     private var headerColor: Color {
