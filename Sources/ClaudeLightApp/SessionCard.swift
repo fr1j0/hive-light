@@ -149,22 +149,39 @@ struct SubagentRows: View {
             if !collapsed {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(list.visible, id: \.id) { sub in
-                        HStack(spacing: 4) {
-                            if sub.state == .failed {
+                        HStack(spacing: 5) {
+                            switch sub.state {
+                            case .failed:
                                 Image(systemName: "xmark")
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(PanelPalette.red)
+                                    .frame(width: 10)
+                            case .done:
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 10)
+                            case .running:
+                                LivePulseDot().frame(width: 10)
                             }
                             Text(sub.label)
                                 .font(.system(size: 11))
-                                .foregroundStyle(sub.state == .failed
-                                                 ? AnyShapeStyle(PanelPalette.red)
-                                                 : AnyShapeStyle(.tertiary))
+                                .strikethrough(sub.state == .done)
+                                .foregroundStyle(foreground(for: sub.state))
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
+                    // The no-color `.strikethrough(_:)` above lets the line
+                    // inherit the dimmed tertiary label color — no explicit
+                    // color argument needed.
                     if list.overflowRunning > 0 {
                         Text("+\(list.overflowRunning) more running")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    if list.overflowDone > 0 {
+                        Text("+\(list.overflowDone) done")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
@@ -175,6 +192,33 @@ struct SubagentRows: View {
                 }
             }
         }
+    }
+
+    private func foreground(for state: Subagent.State) -> AnyShapeStyle {
+        switch state {
+        case .failed:  return AnyShapeStyle(PanelPalette.red)
+        case .done:    return AnyShapeStyle(.tertiary)   // dimmed settled tail
+        case .running: return AnyShapeStyle(.secondary)  // brighter than done
+        }
+    }
+}
+
+/// The live-agent marker: a small orange dot with a gentle pulse. Honors
+/// reduce-motion by falling back to a static dot.
+private struct LivePulseDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var animating = false
+
+    var body: some View {
+        Circle()
+            .fill(PanelPalette.orange)
+            .frame(width: 6, height: 6)
+            .scaleEffect(animating ? 1.0 : 0.7)
+            .opacity(animating ? 1.0 : 0.5)
+            .animation(reduceMotion ? nil
+                       : .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
+                       value: animating)
+            .onAppear { if !reduceMotion { animating = true } }
     }
 }
 
