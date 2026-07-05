@@ -185,7 +185,9 @@ struct ContextTicks: View {
 
     private static func color(for level: ContextLevel) -> Color {
         switch level {
-        case .ok: return Color.secondary
+        // Bright, not .secondary: on the dark panel, secondary grey is
+        // nearly the unlit 15% — lit calm ticks must read as lit.
+        case .ok: return Color.primary.opacity(0.75)
         case .warm: return PanelPalette.orange
         case .hot: return PanelPalette.red
         }
