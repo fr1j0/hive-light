@@ -28,7 +28,11 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             // Context usage refreshes only when a transcript is in hand (the
             // Stop path); other events keep the last measurement (#96).
             contextFraction: transcriptJSONL.flatMap { contextFraction(transcriptJSONL: $0) }
-                ?? existing?.contextFraction
+                ?? existing?.contextFraction,
+            // Branch refreshes whenever the event carries a cwd — a nil read
+            // (detached HEAD, repo gone) clears the label. cwd-less events
+            // keep the last value, like contextFraction (#82).
+            branch: payload.cwd != nil ? gitBranch(forCwd: cwd) : existing?.branch
         )
         try store.write(session)
     }

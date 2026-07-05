@@ -164,4 +164,48 @@ final class ApplyHookTests: XCTestCase {
                       to: store, now: now)
         XCTAssertNil(try store.loadAll().first?.contextFraction)
     }
+
+    // MARK: – Branch labels (#82)
+
+    /// A minimal on-disk repo: <root>/repo/.git/HEAD on the given ref line.
+    private func makeRepo(head: String) throws -> String {
+        let repo = FileManager.default.temporaryDirectory
+            .appendingPathComponent("claude-light-apply-repo-\(UUID().uuidString)/repo")
+        try FileManager.default.createDirectory(
+            at: repo.appendingPathComponent(".git"), withIntermediateDirectories: true)
+        try head.write(to: repo.appendingPathComponent(".git/HEAD"),
+                       atomically: true, encoding: .utf8)
+        return repo.path
+    }
+
+    func test_applyHook_capturesBranch_fromRepoCwd() throws {
+        let store = tempStore()
+        let repo = try makeRepo(head: "ref: refs/heads/feat/labels\n")
+        let p = HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: repo, message: nil)
+        try applyHook(p, to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.branch, "feat/labels")
+    }
+
+    func test_applyHook_freshReadWins_detachedClearsBranch() throws {
+        let store = tempStore()
+        let repo = try makeRepo(head: "ref: refs/heads/main\n")
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: repo, message: nil),
+                      to: store, now: now)
+        try "2e117d43b3bd541e5d5a0a77e58c2d78784ee283\n"
+            .write(to: URL(fileURLWithPath: repo).appendingPathComponent(".git/HEAD"),
+                   atomically: true, encoding: .utf8)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: repo, message: nil),
+                      to: store, now: now)
+        XCTAssertNil(try store.loadAll().first?.branch)
+    }
+
+    func test_applyHook_keepsBranch_whenPayloadHasNoCwd() throws {
+        let store = tempStore()
+        let repo = try makeRepo(head: "ref: refs/heads/main\n")
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: repo, message: nil),
+                      to: store, now: now)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: nil, message: nil),
+                      to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.branch, "main")
+    }
 }
