@@ -37,12 +37,10 @@ public func timerText(for session: Session, now: Date) -> String {
     relativeTime(secondsAgo: now.timeIntervalSince(session.updatedAt))
 }
 
-/// Collapsed-subagents chip: "⑂ 3 subagents · 1 failed".
+/// Collapsed-subagents chip: "⑂ 3 of 5 done" (· K failed when any failed).
 public func subagentChipText(_ list: SubagentList) -> String {
-    let total = list.visible.count + list.overflowRunning
-    let noun = total == 1 ? "subagent" : "subagents"
-    let failed = list.visible.filter { $0.state == .failed }.count
-    return failed > 0 ? "⑂ \(total) \(noun) · \(failed) failed" : "⑂ \(total) \(noun)"
+    let base = "⑂ \(list.doneCount) of \(list.total) done"
+    return list.failedCount > 0 ? "\(base) · \(list.failedCount) failed" : base
 }
 
 /// VoiceOver label for a card — the wording the old menu rows carried, so

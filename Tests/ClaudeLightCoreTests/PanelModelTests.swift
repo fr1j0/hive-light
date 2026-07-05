@@ -37,19 +37,16 @@ final class PanelModelTests: XCTestCase {
         XCTAssertEqual(timerText(for: s(.running, ageSeconds: 45), now: now), "45s")
     }
 
-    func test_subagentChipText_pluralAndFailed() {
-        let list = SubagentList(visible: [
-            Subagent(id: "1", label: "a", state: .running),
-            Subagent(id: "2", label: "b", state: .failed),
-            Subagent(id: "3", label: "c", state: .running),
-        ], overflowRunning: 1)
-        XCTAssertEqual(subagentChipText(list), "⑂ 4 subagents · 1 failed")
+    func test_subagentChipText_countAndFailed() {
+        let list = SubagentList(visible: [], total: 5, doneCount: 3, failedCount: 1,
+                                overflowRunning: 0, overflowDone: 0)
+        XCTAssertEqual(subagentChipText(list), "⑂ 3 of 5 done · 1 failed")
     }
 
-    func test_subagentChipText_singularNoFailures() {
-        let list = SubagentList(visible: [Subagent(id: "1", label: "a", state: .running)],
-                                overflowRunning: 0)
-        XCTAssertEqual(subagentChipText(list), "⑂ 1 subagent")
+    func test_subagentChipText_countNoFailures() {
+        let list = SubagentList(visible: [], total: 5, doneCount: 3, failedCount: 0,
+                                overflowRunning: 0, overflowDone: 0)
+        XCTAssertEqual(subagentChipText(list), "⑂ 3 of 5 done")
     }
 
     func test_accessibilityLabel_matchesOldMenuRow() {
