@@ -52,12 +52,38 @@ public func summaryText(for counts: StatusCounts) -> String? {
 /// STABLE above all (updatedAt moves on every event and would keep rows
 /// shuffling): nil sorts as distant past — un-stamped sessions clump at the
 /// top in fixed id order until the new hook stamps them on their next event.
-public func sortedForMenu(_ sessions: [Session]) -> [Session] {
-    sessions.sorted { a, b in
-        let ta = a.startedAt ?? .distantPast
-        let tb = b.startedAt ?? .distantPast
-        if ta != tb { return ta < tb }
-        return a.sessionID < b.sessionID
+public enum SessionOrder: String, Sendable {
+    case opened    // pure chronological — terminal-tab order
+    case project   // repo blocks (by first-opened), chronological within
+}
+
+public func sortedForMenu(_ sessions: [Session],
+                          order: SessionOrder = .project) -> [Session] {
+    func startKey(_ s: Session) -> (Date, String) {
+        (s.startedAt ?? .distantPast, s.sessionID)
+    }
+    guard order == .project else {
+        return sessions.sorted { startKey($0) < startKey($1) }
+    }
+    // Group identity: the repo root (worktrees/subdirs unify with their main
+    // checkout), else the literal cwd. Never the NAME — basename collisions
+    // must not merge unrelated projects. Blocks hold the position of their
+    // earliest session; chronological within. Every comparison is a total
+    // order — no reliance on sort stability.
+    func groupKey(_ s: Session) -> String { s.repoRoot ?? s.cwd }
+    var blockStart: [String: (Date, String)] = [:]
+    for s in sessions {
+        let k = groupKey(s), v = startKey(s)
+        if let existing = blockStart[k] {
+            if v < existing { blockStart[k] = v }
+        } else {
+            blockStart[k] = v
+        }
+    }
+    return sessions.sorted { a, b in
+        let ka = groupKey(a), kb = groupKey(b)
+        if ka != kb { return blockStart[ka]! < blockStart[kb]! }
+        return startKey(a) < startKey(b)
     }
 }
 

@@ -81,4 +81,40 @@ final class GitBranchTests: XCTestCase {
     func test_emptyCwd_isNil() {
         XCTAssertNil(gitBranch(forCwd: ""))
     }
+
+    // MARK: – gitRepoRoot (session grouping identity)
+
+    func test_repoRoot_normalRepo_isDotGitParent() throws {
+        let root = try makeTree(["repo/.git/HEAD": "ref: refs/heads/main\n"])
+        let repo = root.appendingPathComponent("repo").path
+        XCTAssertEqual(gitRepoRoot(forCwd: repo), repo)
+    }
+
+    func test_repoRoot_subdirectory_resolvesToRoot() throws {
+        let root = try makeTree(["repo/.git/HEAD": "ref: refs/heads/main\n"],
+                                dirs: ["repo/src/deep"])
+        let repo = root.appendingPathComponent("repo").path
+        XCTAssertEqual(gitRepoRoot(forCwd: repo + "/src/deep"), repo)
+    }
+
+    func test_repoRoot_worktree_unifiesWithMainRepo() throws {
+        // Worktree .git FILE points into <main>/.git/worktrees/<name> —
+        // the group identity is the MAIN repo, so worktree sessions cluster
+        // with their parent checkout.
+        let root = try makeTree([
+            "main/.git/worktrees/wt/HEAD": "ref: refs/heads/feat/x\n",
+        ])
+        let mainRepo = root.appendingPathComponent("main").path
+        let wt = root.appendingPathComponent("wt")
+        try FileManager.default.createDirectory(at: wt, withIntermediateDirectories: true)
+        try "gitdir: \(mainRepo)/.git/worktrees/wt\n"
+            .write(to: wt.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        XCTAssertEqual(gitRepoRoot(forCwd: wt.path), mainRepo)
+    }
+
+    func test_repoRoot_nonRepo_isNil() throws {
+        let root = try makeTree([:], dirs: ["plain"])
+        XCTAssertNil(gitRepoRoot(forCwd: root.appendingPathComponent("plain").path))
+        XCTAssertNil(gitRepoRoot(forCwd: ""))
+    }
 }

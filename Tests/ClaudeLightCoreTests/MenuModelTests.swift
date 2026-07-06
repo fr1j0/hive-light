@@ -5,10 +5,12 @@ final class MenuModelTests: XCTestCase {
     private func s(_ status: SessionStatus, project: String = "p",
                    id: String = UUID().uuidString,
                    started: TimeInterval? = nil,
-                   updated: TimeInterval = 1_000_000) -> Session {
-        Session(sessionID: id, status: status, project: project, cwd: "/p",
+                   updated: TimeInterval = 1_000_000,
+                   cwd: String = "/p", repoRoot: String? = nil) -> Session {
+        Session(sessionID: id, status: status, project: project, cwd: cwd,
                 updatedAt: Date(timeIntervalSince1970: updated),
-                startedAt: started.map(Date.init(timeIntervalSince1970:)))
+                startedAt: started.map(Date.init(timeIntervalSince1970:)),
+                repoRoot: repoRoot)
     }
 
     func test_counts_bucketsWaitingAndAttentionTogether() {
@@ -109,4 +111,51 @@ extension MenuModelTests {
         XCTAssertEqual(order, ["running:r", "handoff:h", "waiting:w", "idle:z"])
     }
 
+    // MARK: – grouped order (Sort sessions: By project)
+
+    func test_grouped_ABA_clustersProjectBlocks() {
+        // A(1), B(2), A(3) → A-block first (earliest session), A's chronological
+        // inside, B after: A1, A3, B2.
+        let a1 = s(.running, project: "a", id: "a1", started: 100, cwd: "/r/a", repoRoot: "/r/a")
+        let b2 = s(.running, project: "b", id: "b2", started: 200, cwd: "/r/b", repoRoot: "/r/b")
+        let a3 = s(.idle, project: "a", id: "a3", started: 300, cwd: "/r/a", repoRoot: "/r/a")
+        XCTAssertEqual(sortedForMenu([b2, a3, a1], order: .project).map(\.sessionID),
+                       ["a1", "a3", "b2"])
+    }
+
+    func test_grouped_worktreeSharesBlock_viaRepoRoot() {
+        // Different cwd, same repo root (main checkout + worktree) → one block.
+        let main = s(.running, project: "x", id: "m", started: 100,
+                     cwd: "/r/x", repoRoot: "/r/x")
+        let wt = s(.running, project: "wt", id: "w", started: 300,
+                   cwd: "/r/x/.claude/worktrees/wt", repoRoot: "/r/x")
+        let other = s(.running, project: "y", id: "y", started: 200,
+                      cwd: "/r/y", repoRoot: "/r/y")
+        XCTAssertEqual(sortedForMenu([wt, other, main], order: .project).map(\.sessionID),
+                       ["m", "w", "y"])
+    }
+
+    func test_grouped_nilRepoRoot_fallsBackToCwd() {
+        let n1 = s(.running, project: "n", id: "n1", started: 100, cwd: "/plain/n")
+        let n2 = s(.idle, project: "n", id: "n2", started: 300, cwd: "/plain/n")
+        let m = s(.running, project: "m", id: "m", started: 200, cwd: "/plain/m")
+        XCTAssertEqual(sortedForMenu([n2, m, n1], order: .project).map(\.sessionID),
+                       ["n1", "n2", "m"])
+    }
+
+    func test_grouped_statusFlipStillDoesNotMove() {
+        let a1 = s(.running, project: "a", id: "a1", started: 100, repoRoot: "/r/a")
+        let b2 = s(.running, project: "b", id: "b2", started: 200, repoRoot: "/r/b")
+        let before = sortedForMenu([b2, a1], order: .project).map(\.sessionID)
+        var red = a1; red.status = .attention
+        XCTAssertEqual(sortedForMenu([b2, red], order: .project).map(\.sessionID), before)
+    }
+
+    func test_openedOrder_ignoresGrouping() {
+        let a1 = s(.running, project: "a", id: "a1", started: 100, repoRoot: "/r/a")
+        let b2 = s(.running, project: "b", id: "b2", started: 200, repoRoot: "/r/b")
+        let a3 = s(.idle, project: "a", id: "a3", started: 300, repoRoot: "/r/a")
+        XCTAssertEqual(sortedForMenu([b2, a3, a1], order: .opened).map(\.sessionID),
+                       ["a1", "b2", "a3"])
+    }
 }

@@ -28,9 +28,22 @@ order terminal tabs were opened. Tie-break: `sessionID` (deterministic).
   down one).
 - **Expired sessions drop out**; rows close up. Removal, not reordering.
 
-No sort setting (YAGNI): with urgency sort retired as a *mistake* rather than
-a preference, the only alternative stable order (group by project) has no
-demonstrated demand. Add later if live use creates the itch.
+## Sort setting — two stable orders
+
+Live discussion surfaced a second real mental model ("A, B, A should read
+A, A, B"), so Settings gains **"Sort sessions"** (radio): **By project**
+(default) / **Opened**. Both obey the stability law — status never moves
+anything; the only movement is insertion when the user opens a session.
+
+- **Opened** — pure chronological (terminal-tab order), as above.
+- **By project** — *grouped chronological*: blocks ordered by their earliest
+  session's start; sessions within a block chronological.
+- **Group identity = `repo_root` ?? `cwd` — never the name** (basename
+  collisions must not merge unrelated projects). `repo_root` is the MAIN
+  checkout's root: subdirectory sessions and **worktree** sessions (gitdir
+  pointer resolved) cluster with their parent repo. The hook persists it
+  alongside `branch` (same walk, refreshes with cwd, nil for non-repos).
+- Urgency is NOT an option — it was the disease, not a preference.
 
 ## Start time — schema addition
 
@@ -52,10 +65,10 @@ demonstrated demand. Add later if live use creates the itch.
 
 | Surface | Change |
 |---|---|
-| `sortedForMenu` | urgency rank removed → `started_at` ascending, id tie-break |
-| `Session` / hook (`ApplyHook`) | `started_at` field, set-once merge |
+| `sortedForMenu` | urgency rank removed → `SessionOrder` param: `.project` (grouped, default) / `.opened` (chronological) |
+| `Session` / hook (`ApplyHook`) | `started_at` field (set-once merge) + `repo_root` (branch-like refresh) |
+| Settings | "Sort sessions" radio: By project (default) / Opened |
 | Dots, timers, subtitles, notifications, summary counts, traffic light | unchanged — urgency stays fully visible, just not positional |
-| Settings | unchanged (no sort knob) |
 
 ## Tests
 

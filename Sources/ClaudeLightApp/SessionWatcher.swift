@@ -34,6 +34,14 @@ final class SessionWatcher: ObservableObject {
             UserDefaults.standard.set(showPlanLimits, forKey: Self.showPlanLimitsKey)
         }
     }
+    /// Panel row order (stable-session-order spec): grouped by repo (default)
+    /// or pure open-order. Re-sorts immediately on change.
+    @Published var sessionOrder: SessionOrder {
+        didSet {
+            UserDefaults.standard.set(sessionOrder.rawValue, forKey: Self.sessionOrderKey)
+            reload()
+        }
+    }
     @Published private(set) var launchAtLoginEnabled: Bool = false
 
     /// SMAppService needs a real .app bundle; unbundled dev builds hide the row.
@@ -51,6 +59,7 @@ final class SessionWatcher: ObservableObject {
     private static let showSubagentsKey = "showSubagents"
     private static let showUsageStatsKey = "showUsageStats"
     private static let showPlanLimitsKey = "showPlanLimits"
+    private static let sessionOrderKey = "sessionOrder"
     private static let notifyKey = "notifyOnNeedsYou"
     private let notifier = SessionNotifier()
     /// Previous reload's statuses; nil until the first reload has taken a
@@ -71,6 +80,8 @@ final class SessionWatcher: ObservableObject {
         self.showSubagents = UserDefaults.standard.bool(forKey: Self.showSubagentsKey)
         self.showUsageStats = UserDefaults.standard.bool(forKey: Self.showUsageStatsKey)
         self.showPlanLimits = UserDefaults.standard.bool(forKey: Self.showPlanLimitsKey)
+        self.sessionOrder = UserDefaults.standard.string(forKey: Self.sessionOrderKey)
+            .flatMap(SessionOrder.init(rawValue:)) ?? .project
         self.notifyOnNeedsYou = UserDefaults.standard.bool(forKey: Self.notifyKey)
     }
 
@@ -174,7 +185,7 @@ final class SessionWatcher: ObservableObject {
         subagentCache.evict(keeping: scannedTranscripts)
         // Idle headless runs (plugin jobs, claude -p) are noise: dropped from
         // the rows AND the counts/light so they can't hold the menu hostage.
-        let sorted = sortedForMenu(visibleSessions(live))
+        let sorted = sortedForMenu(visibleSessions(live), order: sessionOrder)
         // Post-error-detection so running→error transitions count; the first
         // reload only takes the baseline. The snapshot updates even while the
         // toggle is off, so enabling it never replays old transitions.

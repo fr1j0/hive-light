@@ -213,6 +213,28 @@ final class ApplyHookTests: XCTestCase {
 
     private let modelEntry = #"{"type":"assistant","message":{"role":"assistant","model":"claude-fable-5","usage":{"input_tokens":10}}}"#
 
+    // MARK: repo_root — grouping identity (stable session order)
+
+    func test_applyHook_capturesRepoRoot_andKeepsIt_withoutCwd() throws {
+        let store = tempStore()
+        let repo = try makeRepo(head: "ref: refs/heads/main\n")
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: repo, message: nil),
+                      to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.repoRoot,
+                       URL(fileURLWithPath: repo).standardizedFileURL.path)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: nil, message: nil),
+                      to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.repoRoot,
+                       URL(fileURLWithPath: repo).standardizedFileURL.path)
+    }
+
+    func test_applyHook_nonRepoCwd_repoRootNil() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now)
+        XCTAssertNil(try store.loadAll().first?.repoRoot)
+    }
+
     // MARK: started_at — set once, sticky forever (stable session order)
 
     func test_applyHook_setsStartedAt_onFirstWrite() throws {

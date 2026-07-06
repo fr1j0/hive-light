@@ -38,6 +38,12 @@ struct SettingsPane: View {
             // Let the checkbox group breathe away from the dividers above and
             // below it, beyond the base 10pt stack spacing.
             VStack(alignment: .leading, spacing: 10) {
+                Picker("Sort sessions", selection: $watcher.sessionOrder) {
+                    Text("By project").tag(SessionOrder.project)
+                    Text("Opened").tag(SessionOrder.opened)
+                }
+                .pickerStyle(.radioGroup)
+                .horizontalRadioGroupLayout()
                 Toggle("Show subagents", isOn: $watcher.showSubagents)
                 Toggle("Show usage stats", isOn: $watcher.showUsageStats)
                 Text("Usage row in the panel · click it for details")

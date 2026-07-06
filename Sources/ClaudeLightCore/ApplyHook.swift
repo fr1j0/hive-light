@@ -39,7 +39,10 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
                 ?? existing?.model,
             // Set once at the session's first event, sticky forever — the
             // panel's stable sort key (terminal-tab order).
-            startedAt: existing?.startedAt ?? now
+            startedAt: existing?.startedAt ?? now,
+            // Grouping identity: refreshes with cwd like branch; cwd-less
+            // events keep the last value.
+            repoRoot: payload.cwd != nil ? gitRepoRoot(forCwd: cwd) : existing?.repoRoot
         )
         try store.write(session)
     }
