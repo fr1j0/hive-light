@@ -12,6 +12,9 @@ struct HiveLightApp: App {
     }
 
     @StateObject private var watcher: SessionWatcher = {
+        // Rename migration (#133): adopt the old ~/.claude-light state before
+        // the store (and its FSEvents watch) binds to the new directory.
+        migrateLegacyStateDirIfNeeded()
         let settings = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/settings.json")
         // Points at the bundled hook binary inside the running .app.

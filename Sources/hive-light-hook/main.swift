@@ -5,6 +5,9 @@ import HiveLightCore
 let input = FileHandle.standardInput.readDataToEndOfFile()
 
 if let payload = try? HiveLightJSON.decoder.decode(HookPayload.self, from: input) {
+    // Rename migration (#133): a user may update the app while old sessions
+    // still have state under ~/.claude-light; adopt it before writing.
+    migrateLegacyStateDirIfNeeded()
     let store = SessionStore(directory: SessionStore.defaultDirectory())
     var transcriptJSONL: String? = nil
     if eventCarriesTranscript(payload.hookEventName), let path = payload.transcriptPath {

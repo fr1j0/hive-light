@@ -4,6 +4,27 @@ import Foundation
 /// Shared by the in-memory filter (`liveSessions`) and on-disk `SessionStore.prune`.
 public let defaultSessionTTL: TimeInterval = 8 * 3600
 
+/// One-time rename migration (#133): moves the legacy ~/.claude-light state
+/// dir to its ~/.hive-light home. Only fires when the legacy dir exists and
+/// the new one doesn't — never merges, never overwrites live state. Cheap
+/// enough (two stats) for the hook's hot path.
+public func migrateLegacyStateDir(from legacy: URL, to current: URL) {
+    let fm = FileManager.default
+    var isDir: ObjCBool = false
+    guard fm.fileExists(atPath: legacy.path, isDirectory: &isDir), isDir.boolValue,
+          !fm.fileExists(atPath: current.path) else { return }
+    try? fm.moveItem(at: legacy, to: current)
+}
+
+/// The default-path variant both entry points (app and hook) call at startup.
+public func migrateLegacyStateDirIfNeeded() {
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    migrateLegacyStateDir(
+        from: home.appendingPathComponent(".claude-light", isDirectory: true),
+        to: home.appendingPathComponent(".hive-light", isDirectory: true)
+    )
+}
+
 public struct SessionStore {
     public let directory: URL
 
