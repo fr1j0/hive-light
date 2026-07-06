@@ -71,33 +71,45 @@ archived quota-window spike.
 
 ## Surfaces
 
-### 1. Usage row (variant B — micro-bar glance)
+### 1. Usage row — the plan-limits mirror (live-test redesign)
 
-One block above the panel footer, visible only when the Settings toggle is on:
+> The originally-approved variant B (composition micro-bar + model chips) was
+> built and live-tested, then **redesigned on the panel**: composition share
+> was judged "cosmetic — I care about real usage toward limits for the current
+> interval." The row now mirrors the fetched limits; composition survives only
+> as the local-only fallback. (Third #83 probe, same law as ever: the running
+> menu bar settles design.)
+
+One block above the panel footer, visible when the usage toggle is on and
+either data source has content. A trailing chevron plus hover highlight carry
+the button affordance; click flips to the Usage view.
+
+**With plan limits fetched (the primary form):** one line per limit bucket —
 
 ```
-[####fable####|##sonnet##|#haiku#]        ← 5px composition micro-bar, 2px gaps
-● FABLE 1.4M  ● SONNET 0.3M  ● HAIKU 0.1M   ↻ 1h 40m
+5-HOUR   ▓░░░░░░░░░   6%   ⏱ 4h 8m
+ALL      ▓▓▓░░░░░░░  38%   ⏱ 1d 14h
+FABLE    ▓▓▓▓▓▓░░░░  61%   ⏱ 1d 14h    ›
 ```
 
-- Micro-bar: one thin (5pt) stacked bar, segment widths = share of the current
-  window's total burn. Rounded ends, 2pt gaps between segments.
-- Chips line: color dot (6pt, 2pt radius) + model short-name (9pt semibold
-  uppercase, secondary) + burn (11pt tabular, secondary), for each model active
-  in the current window, in **descending-burn order** (biggest first); the
-  micro-bar segments use the same order. (The daily stacks in the full view use
-  *fixed* model order instead — stacked segments must keep stable order so days
-  compare visually; a live composition bar reads best biggest-first.)
-- Reset: `↻ 1h 40m` right-aligned, tertiary, tabular digits. The `↻` is
-  rendered via SF Symbol (`arrow.trianglehead.clockwise` or nearest available)
-  — **not** a raw glyph character (lesson from `⑂`).
-- Model overflow: at most 3 chips + the bar; a 4th+ model folds into a grey
-  `+N` chip (the bar still shows all segments).
-- Empty window (no burn since last reset): the row hides entirely — no
-  zero-noise.
-- The whole row is a button: click flips the panel to the Usage view.
-- Placement: below the session list, above the footer divider — deliberately
-  far from the header, where the previous attempt died.
+- Label column (48pt, 9pt semibold): `Session` renders as **5-HOUR** (the
+  word "session" collides with the panel's session cards); weekly buckets
+  drop the redundant "Week · " prefix — just **ALL** / the scope's model
+  name. Labels derive from the server response, so future buckets appear
+  automatically.
+- Bar: 5pt track + fill at the REAL percentage, urgency-colored
+  (`limitLevel`: <75% primary, 75–90% orange, ≥90% red; server severity
+  overrides).
+- `%` exact (tabular), per-bucket **compact countdown** — `4h 8m` under a
+  day, `3d 10h` beyond (weekday wall-clocks clipped and read worse live).
+- Per-bucket hover tooltips explain what each bar measures. Tooltips are
+  static — never interpolate the live countdown (the tooltip-saga rule).
+
+**Local-only fallback (fetch off / unavailable):** the composition micro-bar
+(5pt, segments = models' share of the current 5h window's burn, never
+capacity) + chips via `ViewThatFits` (3 → 2 → 1 chips, `+N` absorbs the
+rest — names and values never truncate) + window countdown with a tooltip
+naming the shared 5h window. Empty window → compact `USAGE ⏱ …` line.
 
 ### 2. Usage view (dedicated pane)
 
@@ -167,12 +179,24 @@ first fetch (deny → silent fallback).
 Never in the background with the panel closed. Politeness toward an unofficial
 endpoint, not cost management.
 
+**Keychain hygiene (live-test hardened):**
+- The token is **cached in memory for the app's lifetime** and re-read only
+  after a 401/403 (rotation) — reading per-fetch re-triggered the macOS
+  consent prompt on every panel open. Never persisted.
+- The Settings toggle **disables itself for API-key/Bedrock users** via an
+  attributes-only Keychain existence check (`oauthLoginPresent()` — checks
+  the item exists without touching the secret, so it cannot prompt), with a
+  caption explaining why. No dead controls.
+- Debug builds re-prompt per rebuild (ad-hoc signatures); the signed release
+  build prompts exactly once ever ("Always Allow" binds to the stable
+  Developer ID identity).
+
 **UI:**
 - The Usage view gains a **Plan limits** section *above* Current window:
-  one bar per `limits[]` entry — label (`session` → "Session", `weekly_all` →
-  "Week · all models", `weekly_scoped` → scope display name, e.g. "Week ·
-  Fable"), a percent-filled bar, `N%` number, and the reset (`↻ 2h 36m` for
-  session, `↻ Wed 2:00` for weekly kinds).
+  one bar per `limits[]` entry — label, a percent-filled bar, `N%` number,
+  and a compact countdown (`⏱ 2h 36m` under a day, `⏱ 3d 10h` beyond) —
+  every bucket counts down; no weekday wall-clocks (they clipped, and
+  "3d left" reads faster than "Wed 2:00").
 - These are **capacity bars**, not model identity — they use the app's
   existing urgency language (like the context gauge): `< 75%` primary,
   `75–90%` orange, `≥ 90%` red. Model categorical colors are NOT used here.
