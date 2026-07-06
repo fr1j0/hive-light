@@ -117,15 +117,19 @@ func removedHookCommands(from root: [String: Any], where shouldRemove: (String) 
     return root
 }
 
-/// Rename migration (#133): if any hook command still references the old
-/// binary (matched by `legacyMarker`), drop those entries and install
-/// `command` in their place. A root with no legacy entries comes back
-/// UNCHANGED — migration never installs for a user who removed the hooks.
+/// Rename migration (#133): if any hook command still references a stale
+/// binary — it matches `legacyMarker` but is not exactly `command` — drop
+/// those entries and install `command` in their place. The exact-command
+/// exclusion lets the marker be the CURRENT binary name too, self-healing
+/// app relocations (dist → /Applications, manual → brew). A root with no
+/// stale entries comes back UNCHANGED — migration never installs for a
+/// user who removed the hooks.
 public func migratedLegacyHooks(in root: [String: Any],
                                 legacyMarker: String,
                                 command: String) -> [String: Any] {
-    guard hooksContainCommand(in: root, where: { $0.contains(legacyMarker) }) else { return root }
-    let cleaned = removedHookCommands(from: root, where: { $0.contains(legacyMarker) })
+    let isStale: (String) -> Bool = { $0.contains(legacyMarker) && $0 != command }
+    guard hooksContainCommand(in: root, where: isStale) else { return root }
+    let cleaned = removedHookCommands(from: root, where: isStale)
     return installedHooks(into: cleaned, command: command)
 }
 
@@ -202,7 +206,8 @@ public struct HookInstaller {
     /// rewrite a settings file we can't read.
     public func migrateLegacy(marker: String) throws -> Bool {
         let root = try loadRoot()
-        guard hooksContainCommand(in: root, where: { $0.contains(marker) }) else { return false }
+        let isStale: (String) -> Bool = { [command] in $0.contains(marker) && $0 != command }
+        guard hooksContainCommand(in: root, where: isStale) else { return false }
         try save(migratedLegacyHooks(in: root, legacyMarker: marker, command: command))
         return true
     }

@@ -61,6 +61,24 @@ final class HookMigrationTests: XCTestCase {
         XCTAssertTrue(commands(out, "SessionStart").contains(newCmd))
     }
 
+    func test_relocatedCurrentBinary_isRewrittenToCurrentPath() {
+        // Self-heal app moves (dist → /Applications, manual → brew): the
+        // marker can be the CURRENT binary name; only exact-path matches stay.
+        let moved = installedHooks(
+            into: [:], command: "'/tmp/dist/Hive Light.app/Contents/MacOS/hive-light-hook'")
+        let out = migratedLegacyHooks(in: moved, legacyMarker: "hive-light-hook", command: newCmd)
+        for event in hiveLightHookEvents {
+            XCTAssertTrue(commands(out, event).contains(newCmd))
+            XCTAssertFalse(commands(out, event).contains { $0.contains("/tmp/dist/") })
+        }
+    }
+
+    func test_currentCommandExactMatch_isNeverStale() {
+        let fresh = installedHooks(into: [:], command: newCmd)
+        let out = migratedLegacyHooks(in: fresh, legacyMarker: "hive-light-hook", command: newCmd)
+        XCTAssertEqual(NSDictionary(dictionary: out), NSDictionary(dictionary: fresh))
+    }
+
     // MARK: - File-level (HookInstaller.migrateLegacy)
 
     func test_installer_migratesFileOnceAndReportsChange() throws {
@@ -76,8 +94,10 @@ final class HookMigrationTests: XCTestCase {
         let installer = HookInstaller(settingsURL: url, command: newCmd)
         XCTAssertTrue(try installer.migrateLegacy(marker: marker))
         XCTAssertTrue(installer.isInstalled())
-        // Second run: nothing legacy left, no write needed.
+        // Second run: nothing legacy left, no write needed — with either
+        // marker, including the current binary's own name.
         XCTAssertFalse(try installer.migrateLegacy(marker: marker))
+        XCTAssertFalse(try installer.migrateLegacy(marker: "hive-light-hook"))
     }
 
     func test_installer_migrate_missingFile_isNoOp() throws {

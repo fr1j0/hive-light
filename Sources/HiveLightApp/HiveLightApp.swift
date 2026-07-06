@@ -31,7 +31,9 @@ struct HiveLightApp: App {
         let installer = HookInstaller(settingsURL: settings, command: shellQuoted(hookPath))
         // Rename migration (#133): hook entries still pointing into the old
         // Claude Light.app bundle died with the rename — rewrite them once.
+        // The second marker self-heals a moved copy of the renamed app.
         _ = try? installer.migrateLegacy(marker: "claude-light-hook")
+        _ = try? installer.migrateLegacy(marker: "hive-light-hook")
         return SessionWatcher(
             store: SessionStore(directory: SessionStore.defaultDirectory()),
             installer: installer
