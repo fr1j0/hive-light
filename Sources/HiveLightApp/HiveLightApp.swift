@@ -21,6 +21,9 @@ struct HiveLightApp: App {
         let hookPath = Bundle.main.bundleURL
             .appendingPathComponent("Contents/MacOS/hive-light-hook").path
         let installer = HookInstaller(settingsURL: settings, command: shellQuoted(hookPath))
+        // Rename migration (#133): hook entries still pointing into the old
+        // Claude Light.app bundle died with the rename — rewrite them once.
+        _ = try? installer.migrateLegacy(marker: "claude-light-hook")
         return SessionWatcher(
             store: SessionStore(directory: SessionStore.defaultDirectory()),
             installer: installer

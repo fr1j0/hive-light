@@ -80,6 +80,55 @@ public func uninstalledHooks(from root: [String: Any], command: String) -> [Stri
     return root
 }
 
+/// True iff any event (ours or not) has an inner hook whose command satisfies
+/// `predicate`. Migration scans every event: an old registration set may
+/// include events the current list no longer has.
+func hooksContainCommand(in root: [String: Any], where predicate: (String) -> Bool) -> Bool {
+    guard let hooks = root["hooks"] as? [String: Any] else { return false }
+    for value in hooks.values {
+        let groups = ((value as? [Any]) ?? []).compactMap { $0 as? [String: Any] }
+        if groups.contains(where: { groupCommands($0).contains(where: predicate) }) { return true }
+    }
+    return false
+}
+
+/// Removes every inner hook whose command satisfies `shouldRemove`, across
+/// ALL events. Entries without a string command are never touched.
+func removedHookCommands(from root: [String: Any], where shouldRemove: (String) -> Bool) -> [String: Any] {
+    var root = root
+    guard var hooks = root["hooks"] as? [String: Any] else { return root }
+
+    for event in Array(hooks.keys) {
+        guard var groups = hooks[event] as? [[String: Any]] else { continue }
+        groups = groups.compactMap { group in
+            var group = group
+            let inner = (group["hooks"] as? [[String: Any]] ?? []).filter { entry in
+                guard let cmd = entry["command"] as? String else { return true }
+                return !shouldRemove(cmd)
+            }
+            if inner.isEmpty { return nil }
+            group["hooks"] = inner
+            return group
+        }
+        if groups.isEmpty { hooks.removeValue(forKey: event) } else { hooks[event] = groups }
+    }
+
+    if hooks.isEmpty { root.removeValue(forKey: "hooks") } else { root["hooks"] = hooks }
+    return root
+}
+
+/// Rename migration (#133): if any hook command still references the old
+/// binary (matched by `legacyMarker`), drop those entries and install
+/// `command` in their place. A root with no legacy entries comes back
+/// UNCHANGED — migration never installs for a user who removed the hooks.
+public func migratedLegacyHooks(in root: [String: Any],
+                                legacyMarker: String,
+                                command: String) -> [String: Any] {
+    guard hooksContainCommand(in: root, where: { $0.contains(legacyMarker) }) else { return root }
+    let cleaned = removedHookCommands(from: root, where: { $0.contains(legacyMarker) })
+    return installedHooks(into: cleaned, command: command)
+}
+
 /// Returns true iff `root` already contains `command` in any event group's inner hooks.
 public func hooksAreInstalled(in root: [String: Any], command: String) -> Bool {
     guard let hooks = root["hooks"] as? [String: Any] else { return false }
@@ -144,5 +193,17 @@ public struct HookInstaller {
 
     public func uninstall() throws {
         try save(uninstalledHooks(from: try loadRoot(), command: command))
+    }
+
+    /// Rename migration (#133): rewrites hook entries left by the old app
+    /// (matched by `marker` in their command) to this installer's command.
+    /// Returns true iff the file changed. A missing file has nothing to
+    /// migrate; an unparseable one throws, like install/uninstall — never
+    /// rewrite a settings file we can't read.
+    public func migrateLegacy(marker: String) throws -> Bool {
+        let root = try loadRoot()
+        guard hooksContainCommand(in: root, where: { $0.contains(marker) }) else { return false }
+        try save(migratedLegacyHooks(in: root, legacyMarker: marker, command: command))
+        return true
     }
 }
