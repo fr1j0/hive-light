@@ -14,6 +14,22 @@
   <img alt="Made for Claude Code" src="https://img.shields.io/badge/Made_for-Claude_Code-D97757?style=for-the-badge">
 </p>
 
+> ### hive light
+> **/ˈhaɪv ˌlaɪt/** — *noun*
+>
+> **1.** the single glow by which a colony of many independent workers can be read as one
+> organism; the state of the whole, never of any one bee.
+>
+> **2.** the glance a beekeeper gives the hive — the work is left to happen on its own, and
+> the keeper steps in only when something truly needs them.
+>
+> **3.** *(software, macOS)* a menu-bar light that distills every Claude Code session on your
+> Mac — projects as cells, sessions within them, subagents fanning out like foragers — into
+> one traffic light: **red** when a session needs you, **orange** while the hive hums,
+> **green** when all is quiet.
+>
+> *A hive is never managed one bee at a time.*
+
 ## Overview
 
 Hive Light watches every Claude Code session on your Mac and distills them into a single traffic light in the menu bar. One glance tells you whether an agent is waiting on you, still working, or done — no alt-tabbing through terminals to find out.
