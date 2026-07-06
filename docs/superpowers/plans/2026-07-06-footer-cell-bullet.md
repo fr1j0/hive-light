@@ -49,7 +49,7 @@ if let version = Self.appVersion {
     // The panel's one brand touch (see 2026-07-06 spec): a hollow hive
     // cell folded into the wordmark — same tertiary as the text, so it
     // reads as part of the name, never as a status signal.
-    HStack(alignment: .firstTextBaseline, spacing: 5) {
+    HStack(spacing: 5) {
         Image(systemName: "hexagon")
             .font(.system(size: 9))
             .accessibilityHidden(true)
