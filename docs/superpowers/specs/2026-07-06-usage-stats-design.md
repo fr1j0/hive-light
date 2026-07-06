@@ -33,10 +33,16 @@ Excluded (noise, some tried-and-rejected):
 
 ## Honesty stance
 
-Burn and reset are knowable from local data; "quota left" is not. Nothing in
-the UI implies capacity: the row's micro-bar shows models **relative to each
-other** (composition of the window's burn), never against a limit. The full
-view's footnote states this outright.
+Burn and reset are knowable from local data; "quota left" locally is not.
+Nothing locally-derived implies capacity: the row's micro-bar shows models
+**relative to each other** (composition of the window's burn), never against a
+limit. The full view's footnote states this outright.
+
+**Exception — real percentages, fetched (opt-in).** Anthropic's OAuth usage
+endpoint serves the account's true limit levels (the same data `/usage`
+shows). When the user opts in, the Usage view gains a **Plan limits** section
+with real percentage bars — honest because they come from Anthropic, not from
+a guess. See "Plan limits fetch" below.
 
 **Designed-for evolution (not built now):** learned ceiling — once a rate-limit
 event is observed in a transcript, the current-window bars gain a quiet tick at
@@ -120,6 +126,66 @@ dividers). Header: `‹ Usage` (back returns to the session list).
 history from Claude Code's stats cache. No caps are exposed, so bars compare
 models to each other, never to a limit."
 
+### Plan limits fetch (opt-in layer)
+
+**Data source:** `GET https://api.anthropic.com/api/oauth/usage` with
+`Authorization: Bearer <accessToken>` and `anthropic-beta: oauth-2025-04-20`.
+The access token is read from the macOS Keychain item Claude Code itself
+maintains (service `"Claude Code-credentials"`, JSON payload,
+`claudeAiOauth.accessToken`). Verified live 2026-07-06: HTTP 200; the
+response's `limits` array is the stable decode target:
+
+```json
+"limits": [
+  {"kind":"session",       "percent":9,  "severity":"normal", "resets_at":"2026-07-06T05:00:00+00:00", "scope":null},
+  {"kind":"weekly_all",    "percent":33, "severity":"normal", "resets_at":"2026-07-07T19:00:00+00:00", "scope":null},
+  {"kind":"weekly_scoped", "percent":53, "severity":"normal", "resets_at":"2026-07-07T19:00:00+00:00", "scope":{"model":{"display_name":"Fable"}}}
+]
+```
+
+Decode **only** `limits[]` (kind, percent, severity, resets_at,
+scope.model.display_name), tolerantly — every other key is ignored; any
+surprise degrades to "no limits data."
+
+**Who it works for:** OAuth subscription users (Pro/Max) — the population that
+has limits. API-key / Bedrock / Vertex users have no token and no quota; for
+them the fetch layer is silently absent.
+
+**Strictly additive, silent fallback.** The local display is the base everyone
+gets. Fetch succeeding upgrades the Usage view; fetch failing — no Keychain
+item, permission denied, 401 (token expired until Claude Code's next refresh),
+endpoint reshape, offline — hides the Plan limits section without any error
+state. Never a broken panel, nothing to troubleshoot.
+
+**Zero cost, zero setup.** The endpoint is account metadata — no tokens
+consumed, no quota touched, nothing billed. Claude Code already put the
+credentials in the Keychain at login; the only user-visible step is macOS's
+one-time "Claude Light wants to access 'Claude Code-credentials'" prompt on
+first fetch (deny → silent fallback).
+
+**Poll cadence:** on panel open + every 5 minutes while the panel is open.
+Never in the background with the panel closed. Politeness toward an unofficial
+endpoint, not cost management.
+
+**UI:**
+- The Usage view gains a **Plan limits** section *above* Current window:
+  one bar per `limits[]` entry — label (`session` → "Session", `weekly_all` →
+  "Week · all models", `weekly_scoped` → scope display name, e.g. "Week ·
+  Fable"), a percent-filled bar, `N%` number, and the reset (`↻ 2h 36m` for
+  session, `↻ Wed 2:00` for weekly kinds).
+- These are **capacity bars**, not model identity — they use the app's
+  existing urgency language (like the context gauge): `< 75%` primary,
+  `75–90%` orange, `≥ 90%` red. Model categorical colors are NOT used here.
+  If the response carries a non-`normal` severity, severity wins over the
+  threshold mapping.
+- The **row's reset countdown** upgrades: when a `session` limit is available,
+  its `resets_at` (Anthropic's clock) replaces the transcript-derived window
+  end. The local computation stays as fallback.
+- Settings gains a second toggle, **"Show plan limits"** (default off),
+  beneath "Show usage stats", with a caption: "Reads your Claude Code login
+  from the Keychain to fetch limits from Anthropic. Nothing else is sent."
+  The fetch runs only when both this is on and the panel is open.
+
 ### 3. Settings toggle
 
 `Show usage stats` checkbox with the existing toggles. **Default off** —
@@ -201,10 +267,14 @@ Pure-function tests (fixtures, no I/O):
   reset text at 100m / 40m / 30s.
 - Cache decode: real-shape fixture → rows; truncated JSON → `[]`; missing
   `dailyModelTokens` key → `[]`.
+- Limits decode: real-shape `limits[]` fixture (session / weekly_all /
+  weekly_scoped with Fable scope) → typed entries with labels; garbled or
+  missing `limits` → `[]`; severity/threshold → urgency mapping.
 - Color slots: dated and bare ids for all four families + unknown → `.other`.
 
 Views: live panel verification (the design gate for this project), including
-the toggle default-off, row click-through, and the today row against `/usage`.
+the toggle default-off, row click-through, the today row against `/usage`,
+and the Plan limits bars matching `/usage`'s percentages.
 
 ## Success criteria
 
@@ -218,7 +288,11 @@ The live-eval bar this must clear (the previous two attempts didn't):
 
 ## Out of scope
 
-- Learned ceiling / cutoff ticks (designed-for, later)
-- Weekly windows (Anthropic weekly caps) — revisit only if the 5h view earns
-  its keep
-- Any network call — local files only, per the project's privacy stance
+- Learned ceiling / cutoff ticks (designed-for, later; largely superseded by
+  the fetched real percentages when the user opts in)
+- Locally-computed weekly burn sums — the fetched weekly percentage bars cover
+  the weekly need honestly; don't duplicate them with raw local approximations
+- Token refresh — claude-light reads Claude Code's token, never refreshes it
+  (a 401 heals on Claude Code's next call; until then, silent fallback)
+- Any network call **other than** the opt-in, fetch-only limits read to
+  Anthropic. No telemetry, nothing sent anywhere, default off.

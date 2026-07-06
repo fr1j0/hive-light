@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A toggleable usage glance — per-model token burn in the current 5h window with reset countdown (micro-bar row above the footer) — plus a dedicated Usage view with daily history.
+**Goal:** A toggleable usage glance — per-model token burn in the current 5h window with reset countdown (micro-bar row above the footer) — plus a dedicated Usage view with real fetched plan-limit bars (opt-in) and daily history.
 
 **Architecture:** Pure logic in `ClaudeLightCore` (window tiling, entry parsing, aggregation, cache decoding, formatting, color slots — all tested). The app adds a `UsageScanner` that scans recently-modified transcripts **off the main actor** (memoized via `FileMemoCache`), a `UsageRow` docked at the panel's reserved #83 slot, a `UsageView` pane on the existing flip mechanism, and one Settings toggle.
 
@@ -19,6 +19,10 @@
 - Panel rhythm: 12pt frame, 10pt stack spacing, 22pt content column, dividers to the 12pt edge.
 - CI strict concurrency: never capture mutable `self` in a detached task — bind what you need first (release-ci-strict-concurrency).
 - Fail-safe parsing: unparseable JSONL lines/files are skipped, never crash; transcript tails are decoded lossy (`String(decoding:as:)`), never strict UTF-8 (#111).
+- Plan limits fetch: `GET https://api.anthropic.com/api/oauth/usage`, headers `Authorization: Bearer <token>` + `anthropic-beta: oauth-2025-04-20`; token from Keychain generic password, service `"Claude Code-credentials"`, JSON key `claudeAiOauth.accessToken`. Decode ONLY the response's `limits[]` array. Verified live 2026-07-06 (HTTP 200).
+- The token must NEVER be logged, printed, persisted, or sent anywhere except the Authorization header of that one request. Fetch failures of any kind → empty limits, silently — never an error state.
+- Fetch runs only when the `Show plan limits` toggle is on AND the panel is open; min 5 minutes between fetches. Both usage toggles default off.
+- Plan-limit bars use urgency colors (`ContextLevel` mapping: <75% primary, 75–90% orange, ≥90% red), NOT model categorical colors — they are capacity, not identity.
 - No AI attribution in commits.
 
 ---
@@ -1188,7 +1192,502 @@ git commit -m "feat: dedicated Usage view with current window + daily history"
 
 ---
 
-### Task 7: Live verification, review & PR
+### Task 7: Core — plan limits decoding & urgency mapping
+
+**Files:**
+- Create: `Sources/ClaudeLightCore/PlanLimits.swift`
+- Test: `Tests/ClaudeLightCoreTests/PlanLimitsTests.swift`
+
+**Interfaces:**
+- Consumes: `ContextLevel` + `contextLevel(fraction:)` (existing, `PanelModel.swift:55-65`), `resetText` (Task 3).
+- Produces:
+  - `public struct PlanLimit: Equatable, Sendable { let kind: String; let label: String; let percent: Int; let severity: String; let resetsAt: Date? }`
+  - `public func planLimits(fromJSON data: Data) -> [PlanLimit]`
+  - `public func limitLevel(_ limit: PlanLimit) -> ContextLevel`
+  - `public func limitResetText(kind: String, resetsAt: Date?, now: Date) -> String?`
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `Tests/ClaudeLightCoreTests/PlanLimitsTests.swift`:
+
+```swift
+import XCTest
+@testable import ClaudeLightCore
+
+final class PlanLimitsTests: XCTestCase {
+    /// Real response shape, captured live 2026-07-06.
+    private let realShape = """
+    {"five_hour":{"utilization":9.0},"limits":[
+      {"kind":"session","group":"session","percent":9,"severity":"normal","resets_at":"2026-07-06T05:00:00.330921+00:00","scope":null,"is_active":false},
+      {"kind":"weekly_all","group":"weekly","percent":33,"severity":"normal","resets_at":"2026-07-07T19:00:00.330945+00:00","scope":null,"is_active":false},
+      {"kind":"weekly_scoped","group":"weekly","percent":53,"severity":"normal","resets_at":"2026-07-07T19:00:00.331249+00:00","scope":{"model":{"id":null,"display_name":"Fable"},"surface":null},"is_active":true}
+    ]}
+    """.data(using: .utf8)!
+
+    func test_decodesRealShape_withLabelsAndDates() {
+        let limits = planLimits(fromJSON: realShape)
+        XCTAssertEqual(limits.count, 3)
+        XCTAssertEqual(limits[0].kind, "session")
+        XCTAssertEqual(limits[0].label, "Session")
+        XCTAssertEqual(limits[0].percent, 9)
+        XCTAssertNotNil(limits[0].resetsAt)   // 6-digit fractional offset form must parse
+        XCTAssertEqual(limits[1].label, "Week · all")
+        XCTAssertEqual(limits[2].label, "Week · Fable")   // scope display name
+        XCTAssertEqual(limits[2].percent, 53)
+    }
+
+    func test_unknownKind_keptWithKindAsLabel() {
+        let json = Data(#"{"limits":[{"kind":"monthly_beta","percent":10,"severity":"normal"}]}"#.utf8)
+        let limits = planLimits(fromJSON: json)
+        XCTAssertEqual(limits.first?.label, "monthly_beta")
+        XCTAssertNil(limits.first?.resetsAt)   // missing resets_at tolerated
+    }
+
+    func test_garbledOrMissingLimits_returnsEmpty() {
+        XCTAssertTrue(planLimits(fromJSON: Data(#"{"limits":"nope"}"#.utf8)).isEmpty)
+        XCTAssertTrue(planLimits(fromJSON: Data(#"{"five_hour":{}}"#.utf8)).isEmpty)
+        XCTAssertTrue(planLimits(fromJSON: Data("not json".utf8)).isEmpty)
+    }
+
+    func test_limitLevel_thresholdsAndSeverityOverride() {
+        func limit(_ pct: Int, severity: String = "normal") -> PlanLimit {
+            PlanLimit(kind: "session", label: "Session", percent: pct, severity: severity, resetsAt: nil)
+        }
+        XCTAssertEqual(limitLevel(limit(9)), .ok)
+        XCTAssertEqual(limitLevel(limit(75)), .warm)
+        XCTAssertEqual(limitLevel(limit(90)), .hot)
+        XCTAssertEqual(limitLevel(limit(10, severity: "warning")), .warm)   // server flag wins
+        XCTAssertEqual(limitLevel(limit(10, severity: "exceeded")), .hot)
+    }
+
+    func test_limitResetText_sessionCountdown_weeklyWallclock() {
+        let now = ISO8601DateFormatter().date(from: "2026-07-06T02:24:00Z")!
+        let sessionReset = ISO8601DateFormatter().date(from: "2026-07-06T05:00:00Z")!
+        XCTAssertEqual(limitResetText(kind: "session", resetsAt: sessionReset, now: now), "2h 36m")
+        XCTAssertNil(limitResetText(kind: "session", resetsAt: nil, now: now))
+        // Weekly form is weekday + time; exact string depends on local timezone,
+        // so assert shape, not value.
+        let weekly = limitResetText(kind: "weekly_all", resetsAt: sessionReset, now: now)
+        XCTAssertNotNil(weekly)
+        XCTAssertFalse(weekly!.contains("h "))   // not a countdown
+    }
+}
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `swift test --filter PlanLimitsTests`
+Expected: FAIL — `PlanLimit` / `planLimits` / `limitLevel` / `limitResetText` undefined.
+
+- [ ] **Step 3: Implement**
+
+Create `Sources/ClaudeLightCore/PlanLimits.swift`:
+
+```swift
+import Foundation
+
+/// One plan-limit bucket from Anthropic's OAuth usage endpoint (#83) — the
+/// same data `/usage` shows: session (5h), weekly all-models, and weekly
+/// model-scoped (e.g. Fable's own cap). Percentages are REAL — they come
+/// from Anthropic, not from local guessing.
+public struct PlanLimit: Equatable, Sendable {
+    public let kind: String        // "session" | "weekly_all" | "weekly_scoped" | future kinds
+    public let label: String       // display label, derived from kind + scope
+    public let percent: Int
+    public let severity: String    // "normal" unless the server flags otherwise
+    public let resetsAt: Date?
+
+    public init(kind: String, label: String, percent: Int, severity: String, resetsAt: Date?) {
+        self.kind = kind
+        self.label = label
+        self.percent = percent
+        self.severity = severity
+        self.resetsAt = resetsAt
+    }
+}
+
+// The endpoint writes 6-digit fractional offsets ("…T05:00:00.330921+00:00");
+// ISO8601DateFormatter is unreliable past 3 digits, so a POSIX DateFormatter
+// leads and ISO8601 forms are fallbacks.
+private let limitsFractional: DateFormatter = {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+    return f
+}()
+private let limitsISOFractional: ISO8601DateFormatter = {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return f
+}()
+private let limitsISOPlain = ISO8601DateFormatter()
+
+private func parseLimitDate(_ s: String) -> Date? {
+    limitsFractional.date(from: s) ?? limitsISOFractional.date(from: s) ?? limitsISOPlain.date(from: s)
+}
+
+/// Tolerant decode of the response's `limits` array — every other key is
+/// ignored, any surprise degrades to fewer rows or `[]`, never an error.
+/// Unknown kinds are kept (labeled by their kind) so future buckets appear
+/// rather than vanish.
+public func planLimits(fromJSON data: Data) -> [PlanLimit] {
+    guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let rows = obj["limits"] as? [[String: Any]] else { return [] }
+    return rows.compactMap { row in
+        guard let kind = row["kind"] as? String,
+              let percent = (row["percent"] as? NSNumber)?.intValue else { return nil }
+        let severity = row["severity"] as? String ?? "normal"
+        let resetsAt = (row["resets_at"] as? String).flatMap(parseLimitDate)
+        let scopeName = ((row["scope"] as? [String: Any])?["model"] as? [String: Any])?["display_name"] as? String
+        let label: String
+        switch kind {
+        case "session": label = "Session"
+        case "weekly_all": label = "Week · all"
+        case "weekly_scoped": label = "Week · \(scopeName ?? "scoped")"
+        default: label = kind
+        }
+        return PlanLimit(kind: kind, label: label, percent: percent,
+                         severity: severity, resetsAt: resetsAt)
+    }
+}
+
+/// Urgency for a limit bar — the context gauge's bands, so the panel speaks
+/// one urgency language. A non-normal server severity outranks the threshold.
+public func limitLevel(_ limit: PlanLimit) -> ContextLevel {
+    switch limit.severity {
+    case "normal": return contextLevel(fraction: Double(limit.percent) / 100)
+    case "warning": return .warm
+    default: return .hot
+    }
+}
+
+private let weekdayClock: DateFormatter = {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.dateFormat = "EEE H:mm"
+    return f
+}()
+
+/// Session limits show a countdown ("2h 36m"); weekly limits show the
+/// wall-clock reset ("Wed 2:00"). Nil when the server sent no reset.
+public func limitResetText(kind: String, resetsAt: Date?, now: Date) -> String? {
+    guard let resetsAt else { return nil }
+    return kind == "session" ? resetText(until: resetsAt, now: now)
+                             : weekdayClock.string(from: resetsAt)
+}
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `swift test --filter PlanLimitsTests`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Sources/ClaudeLightCore/PlanLimits.swift Tests/ClaudeLightCoreTests/PlanLimitsTests.swift
+git commit -m "feat: plan-limits decoding and urgency mapping"
+```
+
+---
+
+### Task 8: App — Keychain token read + limits fetcher + settings flag
+
+**Files:**
+- Create: `Sources/ClaudeLightApp/LimitsFetcher.swift`
+- Modify: `Sources/ClaudeLightApp/SessionWatcher.swift` (add `showPlanLimits`, mirroring `showUsageStats` from Task 4)
+
+**Interfaces:**
+- Consumes: `PlanLimit`, `planLimits(fromJSON:)` (Task 7).
+- Produces:
+  - `@MainActor final class LimitsFetcher: ObservableObject` with `@Published private(set) var limits: [PlanLimit]` and `func refresh(force: Bool = false)`
+  - `SessionWatcher.showPlanLimits: Bool` (`@Published`, UserDefaults key `"showPlanLimits"`, default false)
+
+App plumbing over the tested decoder — no new unit tests; verify by build + suite.
+
+- [ ] **Step 1: Add the settings flag to SessionWatcher**
+
+Exactly like `showUsageStats` (Task 4): property with `didSet` persist, key constant `"showPlanLimits"`, `UserDefaults.standard.bool` load in `init`.
+
+```swift
+    @Published var showPlanLimits: Bool {
+        didSet {
+            UserDefaults.standard.set(showPlanLimits, forKey: Self.showPlanLimitsKey)
+        }
+    }
+```
+```swift
+    private static let showPlanLimitsKey = "showPlanLimits"
+```
+```swift
+        self.showPlanLimits = UserDefaults.standard.bool(forKey: Self.showPlanLimitsKey)
+```
+
+- [ ] **Step 2: Create the fetcher**
+
+Create `Sources/ClaudeLightApp/LimitsFetcher.swift`:
+
+```swift
+import Foundation
+import Combine
+import Security
+import ClaudeLightCore
+
+/// Fetches the account's real plan-limit levels (#83) from Anthropic's OAuth
+/// usage endpoint — the same read `/usage` performs. Strictly additive with
+/// silent fallback: no Keychain item, denied access, 401, offline, or a
+/// reshaped response all yield empty limits and hide the section; never an
+/// error state. The token is read from the Keychain item Claude Code itself
+/// maintains, used once in an Authorization header, and never logged,
+/// persisted, or sent anywhere else.
+@MainActor
+final class LimitsFetcher: ObservableObject {
+    @Published private(set) var limits: [PlanLimit] = []
+
+    private var fetching = false
+    private var lastFetch = Date.distantPast
+    static let minInterval: TimeInterval = 300   // politeness toward an unofficial endpoint
+
+    func refresh(force: Bool = false) {
+        guard !fetching,
+              force || Date().timeIntervalSince(lastFetch) >= Self.minInterval else { return }
+        fetching = true
+        Task { [weak self] in
+            let fetched = await Task.detached(priority: .utility) {
+                Self.fetch()
+            }.value
+            self?.limits = fetched
+            self?.fetching = false
+            self?.lastFetch = Date()
+        }
+    }
+
+    // MARK: - Off-main work (static: no self capture in the detached task)
+
+    nonisolated static func fetch() async -> [PlanLimit] {
+        guard let token = keychainToken() else { return [] }
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+        request.timeoutInterval = 10
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+        return planLimits(fromJSON: data)
+    }
+
+    /// Claude Code stores its OAuth credentials at login; we only read them.
+    /// First read triggers macOS's one-time permission prompt — deny is a
+    /// supported answer (empty limits).
+    nonisolated static func keychainToken() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "Claude Code-credentials",
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data,
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = obj["claudeAiOauth"] as? [String: Any],
+              let token = oauth["accessToken"] as? String, !token.isEmpty else { return nil }
+        return token
+    }
+}
+```
+
+- [ ] **Step 3: Build and run the full suite**
+
+Run: `swift build && swift test`
+Expected: build clean; all tests pass.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add Sources/ClaudeLightApp/LimitsFetcher.swift Sources/ClaudeLightApp/SessionWatcher.swift
+git commit -m "feat: opt-in plan-limits fetcher (Keychain token, silent fallback)"
+```
+
+---
+
+### Task 9: App — Plan limits UI (Usage view section, row reset upgrade, Settings toggle)
+
+**Files:**
+- Modify: `Sources/ClaudeLightApp/UsageView.swift` (Plan limits section above Current window)
+- Modify: `Sources/ClaudeLightApp/PanelContent.swift` (fetcher wiring, row reset override, pass limits to the view)
+- Modify: `Sources/ClaudeLightApp/SettingsPane.swift` (second toggle + caption)
+
+**Interfaces:**
+- Consumes: `LimitsFetcher` (Task 8), `PlanLimit`, `limitLevel`, `limitResetText` (Task 7), `UsageView`/`UsageRow` (Tasks 5-6), `ContextLevel`.
+- Produces: `UsageView(snapshot:limits:now:onBack:)` (signature gains `limits: [PlanLimit]`).
+
+View code — verify by build + suite + live check in Task 10.
+
+- [ ] **Step 1: Add the Plan limits section to UsageView**
+
+In `Sources/ClaudeLightApp/UsageView.swift`: add the property and section.
+
+Add to the struct's stored properties:
+
+```swift
+    let limits: [PlanLimit]
+```
+
+In `body`, insert before `currentWindow` (inside the non-empty branch):
+
+```swift
+                if !limits.isEmpty {
+                    planLimitsSection
+                    Divider().padding(.horizontal, -10)
+                }
+```
+
+Also change the empty check so limits count as content:
+
+```swift
+            if snapshot.windowBurn.isEmpty && days.isEmpty && limits.isEmpty {
+```
+
+Add the section and its color helper:
+
+```swift
+    // MARK: - Plan limits (fetched — real percentages)
+
+    @ViewBuilder private var planLimitsSection: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            sectionTitle("Plan limits")
+            ForEach(limits, id: \.kind) { limit in
+                HStack(spacing: 8) {
+                    Text(limit.label)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 74, alignment: .leading)
+                        .lineLimit(1)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.primary.opacity(0.08))
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Self.levelColor(limitLevel(limit)))
+                                .frame(width: geo.size.width * CGFloat(min(limit.percent, 100)) / 100)
+                        }
+                    }
+                    .frame(height: 8)
+                    Text("\(limit.percent)%")
+                        .font(.system(size: 11)).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, alignment: .trailing)
+                    Text(resetLabel(limit))
+                        .font(.system(size: 10)).monospacedDigit()
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 58, alignment: .trailing)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private func resetLabel(_ limit: PlanLimit) -> String {
+        limitResetText(kind: limit.kind, resetsAt: limit.resetsAt, now: now).map { "↻ \($0)" } ?? ""
+    }
+
+    /// Capacity bars speak the context gauge's urgency language — never the
+    /// model categorical palette (capacity, not identity).
+    private static func levelColor(_ level: ContextLevel) -> Color {
+        switch level {
+        case .ok: return Color.primary.opacity(0.75)
+        case .warm: return PanelPalette.orange
+        case .hot: return PanelPalette.red
+        }
+    }
+```
+
+Note: `resetLabel` uses the text glyph `↻` inside a `Text` next to values — if it renders poorly in the system font during live verify (the `⑂` lesson), swap to an `Image(systemName: "arrow.clockwise")` + `Text` pair like the row does. Flag it for the Task 10 live check.
+
+Update the footnote to cover the fetched section:
+
+```swift
+    private var footnote: some View {
+        Text("Plan limits come from Anthropic with your Claude Code login (opt-in). Everything else is local — window from your transcripts, history from Claude Code's stats cache; those bars compare models to each other, never to a limit.")
+            .font(.system(size: 10))
+            .foregroundStyle(.tertiary)
+    }
+```
+
+- [ ] **Step 2: Wire the fetcher in PanelContent**
+
+In `Sources/ClaudeLightApp/PanelContent.swift`:
+
+Add next to the scanner:
+
+```swift
+    @StateObject private var limitsFetcher = LimitsFetcher()
+```
+
+Extend the refresh wiring (the `.onAppear` / `.onReceive` added in Task 5):
+
+```swift
+        .onAppear {
+            if watcher.showUsageStats { usage.refresh(force: true) }
+            if watcher.showPlanLimits { limitsFetcher.refresh(force: true) }
+        }
+        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+            if watcher.showUsageStats { usage.refresh() }
+            if watcher.showPlanLimits { limitsFetcher.refresh() }   // fetcher self-throttles to 5 min
+        }
+```
+
+Pass limits into the Usage pane (Task 6's branch):
+
+```swift
+            } else if showingUsage {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    UsageView(snapshot: usage.snapshot,
+                              limits: watcher.showPlanLimits ? limitsFetcher.limits : [],
+                              now: context.date) { showingUsage = false }
+                }
+            }
+```
+
+Upgrade the row's reset to Anthropic's session clock when available (Task 5's row call):
+
+```swift
+                let sessionReset = watcher.showPlanLimits
+                    ? limitsFetcher.limits.first(where: { $0.kind == "session" })?.resetsAt
+                    : nil
+                UsageRow(burn: usage.snapshot.windowBurn,
+                         windowEnd: sessionReset ?? usage.snapshot.windowEnd,
+                         now: now) { showingUsage = true }
+```
+
+- [ ] **Step 3: Add the Settings toggle + caption**
+
+In `Sources/ClaudeLightApp/SettingsPane.swift`, after the `Show usage stats` toggle:
+
+```swift
+                Toggle("Show plan limits", isOn: $watcher.showPlanLimits)
+                Text("Reads your Claude Code login from the Keychain to fetch limits from Anthropic. Nothing else is sent.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 18)
+```
+
+- [ ] **Step 4: Build and run the full suite**
+
+Run: `swift build && swift test`
+Expected: build clean; all tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Sources/ClaudeLightApp/UsageView.swift Sources/ClaudeLightApp/PanelContent.swift Sources/ClaudeLightApp/SettingsPane.swift
+git commit -m "feat: plan-limits bars in Usage view, real session reset in row, Settings toggle"
+```
+
+---
+
+### Task 10: Live verification, review & PR
 
 **Files:** none (verification only).
 
@@ -1201,7 +1700,8 @@ Check, against the approved mockup (variant B row + dedicated view) and the spec
 - Toggle ON in Settings: the micro-bar row appears above the footer with the current window's models, descending, reset countdown at the right; fixed height (numbers changing must not reflow the panel).
 - Click the row → Usage view: current-window bars, reset line with wall-clock, daily history with a bold `today` row, legend, footnote. Back returns to sessions.
 - Sanity-check the numbers: today's row against `/usage` in a Claude Code session; daily history against `~/.claude/stats-cache.json` values.
-- No perceptible lag opening the panel (scan is off-main and memoized).
+- Plan limits: toggle "Show plan limits" ON → macOS Keychain prompt appears once → Allow → the three bars appear and match `/usage`'s percentages and reset times; the row's session reset switches to Anthropic's clock. Toggle OFF or Deny → section absent, no error anywhere. Check the `↻` glyph renders cleanly next to the reset labels (swap to the SF Symbol pair if not — the `⑂` lesson).
+- No perceptible lag opening the panel (scan is off-main and memoized; fetch is async).
 - With no activity in 5h (or by temporarily setting `lookback` low in a scratch run), the row hides rather than showing zeros.
 
 - [ ] **Step 2: Full suite once more**
@@ -1217,34 +1717,18 @@ Whole-branch review before PR (superpowers:requesting-code-review / the SDD fina
 
 ```bash
 git push -u origin feat/usage-stats
-gh pr create --title "feat: usage stats — model window burn + reset (#83)" \
-  --body "Toggleable usage glance: per-model token burn in the current 5h window (micro-bar row above the footer) + reset countdown, with a dedicated Usage view showing daily per-model history. Spec: docs/superpowers/specs/2026-07-06-usage-stats-design.md. Third probe of #83 — scoped to model rationing; honest display (no cap percentages)."
+gh pr create --title "feat: usage stats — model window burn, plan limits, reset (#83)" \
+  --body "Toggleable usage glance: per-model token burn in the current 5h window (micro-bar row above the footer) + reset countdown, and a dedicated Usage view with REAL plan-limit bars (opt-in fetch from Anthropic's OAuth usage endpoint via the Keychain token Claude Code already stores — silent fallback when unavailable) plus daily per-model history. Spec: docs/superpowers/specs/2026-07-06-usage-stats-design.md. Third probe of #83 — scoped to model rationing."
 ```
 
 ---
 
 ## Self-Review
 
-**Spec coverage:** Window tiling + basis → Task 1. Cache decode → Task 2. Formatting/slots → Task 3. Off-main scanner + 24h lookback + today burn + history load → Task 4. Row (variant B: micro-bar, ≤3 chips + `+N`, reset symbol, hide-when-empty, click-through, placement, height estimate) → Task 5. View (current window, daily w/ fixed stack order + live today + hover + legend + footnote, empty state) → Task 6. Toggle default-off → Tasks 4-5. Palette/status-color rule → Task 5 (`UsagePalette`). Success criteria → Task 7. Learned ceiling explicitly out of scope — no task, per spec.
+**Spec coverage:** Window tiling + basis → Task 1. Cache decode → Task 2. Formatting/slots → Task 3. Off-main scanner + 24h lookback + today burn + history load → Task 4. Row (variant B: micro-bar, ≤3 chips + `+N`, reset symbol, hide-when-empty, click-through, placement, height estimate) → Task 5. View (current window, daily w/ fixed stack order + live today + hover + legend + footnote, empty state) → Task 6. Toggle default-off → Tasks 4-5, 8-9. Palette/status-color rule → Task 5 (`UsagePalette`); capacity-bar urgency rule → Tasks 7 (`limitLevel`) + 9 (`levelColor`). Limits decode → Task 7. Keychain read + fetch + silent fallback + 5-min throttle → Task 8. Plan-limits section, row reset upgrade, Settings caption → Task 9. Success criteria → Task 10. Learned ceiling explicitly out of scope — no task, per spec.
 
 **Placeholder scan:** none — every code step is complete.
 
-**Type consistency:** `UsageEntry`/`ModelBurn`/`DailyModelTokens`/`ModelColorSlot` signatures match across Tasks 1-6; `UsageSnapshot` fields (`windowBurn`, `windowEnd`, `todayBurn`, `dailyHistory`) consistent between Tasks 4, 5, 6; `UsagePalette.color(for:)`/`color(forModel:)`/`chipName` defined in Task 5, consumed in Task 6; `refresh(force:)` matches between Tasks 4 and 5.
+**Type consistency:** `UsageEntry`/`ModelBurn`/`DailyModelTokens`/`ModelColorSlot` signatures match across Tasks 1-6; `UsageSnapshot` fields (`windowBurn`, `windowEnd`, `todayBurn`, `dailyHistory`) consistent between Tasks 4, 5, 6; `UsagePalette.color(for:)`/`color(forModel:)`/`chipName` defined in Task 5, consumed in Task 6; `refresh(force:)` matches between Tasks 4/8 and their PanelContent call sites; `PlanLimit`/`planLimits`/`limitLevel`/`limitResetText` (Task 7) match Task 8's fetch and Task 9's view usage; `UsageView` gains `limits: [PlanLimit]` consistently between Tasks 9's view and PanelContent call.
 
----
-
-## OPEN FORK (pre-execution)
-
-The user's /usage shows three real buckets (session 5h · weekly all-models ·
-weekly **Fable-specific**, resets Wed 2:00 AM) with true percentages — served
-only by Anthropic's OAuth usage endpoint, never persisted locally (verified:
-~/.claude.json carries flags only). Pending user decision:
-
-- **Fetch behind opt-in** → adds a Keychain token read + fetch-only API call;
-  real % bars + reset times; per-model breakdown here stays transcript-derived.
-- **Stay local-only** → this plan as written, plus a weekly raw-burn section
-  (stats-cache daily sums since a user-set reset day).
-
-Tasks 1–3 (and most of 4) are fork-independent foundations. Do not execute
-Tasks 5–6 until the fork is decided — the row/view layout changes if real
-percentages arrive.
+Fork resolved 2026-07-06: opt-in fetch approved by the user; Tasks 7-9 implement it. Endpoint verified live (HTTP 200) before planning.
