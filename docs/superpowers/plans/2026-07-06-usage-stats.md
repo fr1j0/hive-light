@@ -1624,16 +1624,26 @@ Add next to the scanner:
     @StateObject private var limitsFetcher = LimitsFetcher()
 ```
 
-Extend the refresh wiring (the `.onAppear` / `.onReceive` added in Task 5):
+Extend the refresh wiring. Task 5's fix replaced the original `.onAppear`/`.onReceive` pair with a `.task` loop + `.onChange` (an inline `Timer.publish` in `body` is recreated by every re-render and never fires). Extend THAT structure:
 
 ```swift
-        .onAppear {
+        .task {
+            // View-identity lifetime: starts when the panel opens, cancels on
+            // close; immune to body re-evaluation (an inline Timer.publish here
+            // would be recreated by every animationPhase tick and never fire).
             if watcher.showUsageStats { usage.refresh(force: true) }
             if watcher.showPlanLimits { limitsFetcher.refresh(force: true) }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                if watcher.showUsageStats { usage.refresh() }
+                if watcher.showPlanLimits { limitsFetcher.refresh() }   // fetcher self-throttles to 5 min
+            }
         }
-        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
-            if watcher.showUsageStats { usage.refresh() }
-            if watcher.showPlanLimits { limitsFetcher.refresh() }   // fetcher self-throttles to 5 min
+        .onChange(of: watcher.showUsageStats) { enabled in
+            if enabled { usage.refresh(force: true) }
+        }
+        .onChange(of: watcher.showPlanLimits) { enabled in
+            if enabled { limitsFetcher.refresh(force: true) }
         }
 ```
 
