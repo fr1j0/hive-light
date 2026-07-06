@@ -136,11 +136,14 @@ struct PanelContent: View {
                 // view state on expiry — the very churn this feature kills).
                 ForEach(sessionBlocks(watcher.sessions), id: \.first!.groupKey) { block in
                     VStack(alignment: .leading, spacing: 4) {
+                        // The header carries the project name — the role the
+                        // classic card title plays — so it wears title color.
                         Text(blockTitle(block).uppercased())
                             .font(.system(size: 9, weight: .semibold))
                             .kerning(1)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.primary)
                             .padding(.top, 4)
+                            .padding(.leading, 4)
                         ForEach(block, id: \.sessionID) { session in
                             card(session, now: now, grouped: true)
                         }
