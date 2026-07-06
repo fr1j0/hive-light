@@ -112,6 +112,8 @@ Claude Light edits your settings and runs on every Claude Code hook, so it is fu
 
 Install only from the official [Releases](https://github.com/fr1j0/claude-light/releases), and verify the published SHA-256 checksum before running.
 
+Everything stays on your machine — no network, no telemetry; see [PRIVACY.md](PRIVACY.md) for exactly what the app touches. To report a vulnerability privately, see [SECURITY.md](SECURITY.md). Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License & Trademark
 
 Licensed under [Apache-2.0](LICENSE). The name "Claude Light", logo, and icon are **not** licensed under Apache-2.0 — see [TRADEMARK.md](TRADEMARK.md) for details.
