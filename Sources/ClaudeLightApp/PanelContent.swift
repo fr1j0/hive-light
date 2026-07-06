@@ -48,9 +48,18 @@ struct PanelContent: View {
             }
         }
         .frame(width: 340)
-        .onAppear { if watcher.showUsageStats { usage.refresh(force: true) } }
-        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
-            if watcher.showUsageStats { usage.refresh() }
+        .task {
+            // View-identity lifetime: starts when the panel opens, cancels on
+            // close; immune to body re-evaluation (an inline Timer.publish here
+            // would be recreated by every animationPhase tick and never fire).
+            if watcher.showUsageStats { usage.refresh(force: true) }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                if watcher.showUsageStats { usage.refresh() }
+            }
+        }
+        .onChange(of: watcher.showUsageStats) { enabled in
+            if enabled { usage.refresh(force: true) }
         }
     }
 
