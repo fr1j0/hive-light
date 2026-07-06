@@ -30,7 +30,10 @@ struct PanelContent: View {
             $0 + min($1.visible.count, 8)
         }
         let usageRow = usageRowVisible ? 1 : 0
-        return watcher.sessions.count + subagentRows / 3 + usageRow
+        // Grouped mode adds one ~14pt header per block (~1/3 card height).
+        let headerRows = watcher.sessionOrder == .project
+            ? (sessionBlocks(watcher.sessions).count + 2) / 3 : 0
+        return watcher.sessions.count + subagentRows / 3 + usageRow + headerRows
     }
 
     /// The usage row is the door to the Usage view — visible when its toggle
@@ -123,15 +126,43 @@ struct PanelContent: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
+            } else if watcher.sessionOrder == .project {
+                // Original variant B (live verdict): EVERY block gets the
+                // tiny repo header and branch-led cards — one card grammar
+                // everywhere; the project name always lives in the header,
+                // never sometimes-in/sometimes-out of the card.
+                // id = groupKey: stable when the block's earliest session
+                // expires (a member-session id would reset the whole block's
+                // view state on expiry — the very churn this feature kills).
+                ForEach(sessionBlocks(watcher.sessions), id: \.first!.groupKey) { block in
+                    VStack(alignment: .leading, spacing: 4) {
+                        // The header carries the project name — the role the
+                        // classic card title plays — so it wears title color.
+                        Text(blockTitle(block).uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .kerning(1)
+                            .foregroundStyle(.primary)
+                            .padding(.top, 4)
+                            .padding(.leading, 4)
+                        ForEach(block, id: \.sessionID) { session in
+                            card(session, now: now, grouped: true)
+                        }
+                    }
+                }
             } else {
                 ForEach(watcher.sessions, id: \.sessionID) { session in
-                    SessionCard(session: session,
-                                errorReason: watcher.errorReasons[session.sessionID],
-                                subagents: watcher.subagentsBySession[session.sessionID],
-                                now: now)
+                    card(session, now: now, grouped: false)
                 }
             }
         }
+    }
+
+    private func card(_ session: Session, now: Date, grouped: Bool) -> some View {
+        SessionCard(session: session,
+                    errorReason: watcher.errorReasons[session.sessionID],
+                    subagents: watcher.subagentsBySession[session.sessionID],
+                    now: now,
+                    grouped: grouped)
     }
 
     private var footer: some View {

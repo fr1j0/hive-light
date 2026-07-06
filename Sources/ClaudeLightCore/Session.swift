@@ -35,11 +35,23 @@ public struct Session: Codable, Sendable, Equatable {
     /// Model id of the session's last assistant turn (#105); nil until a
     /// transcript-bearing event, and for sessions written by older hooks.
     public var model: String?
+    /// Root of the MAIN git checkout containing cwd (#session-grouping):
+    /// worktrees and subdirectories resolve to the same identity, so related
+    /// sessions cluster in the grouped panel order. Refreshes with cwd like
+    /// `branch`; nil for non-repos and older hooks.
+    public var repoRoot: String?
+    /// When the session's first hook event was seen — the stable sort key for
+    /// the panel (rows hold terminal-tab order; status never moves them). Set
+    /// once by the hook, sticky across all later writes; nil for sessions
+    /// written by older hooks (those sort as distant past, in stable id
+    /// order — never by updatedAt, which moves on every event).
+    public var startedAt: Date?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
-                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil, model: String? = nil) {
+                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil, model: String? = nil,
+                startedAt: Date? = nil, repoRoot: String? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -54,6 +66,8 @@ public struct Session: Codable, Sendable, Equatable {
         self.contextFraction = contextFraction
         self.branch = branch
         self.model = model
+        self.startedAt = startedAt
+        self.repoRoot = repoRoot
     }
 
     enum CodingKeys: String, CodingKey {
@@ -71,6 +85,8 @@ public struct Session: Codable, Sendable, Equatable {
         case contextFraction = "context_fraction"
         case branch
         case model
+        case startedAt = "started_at"
+        case repoRoot = "repo_root"
     }
 }
 

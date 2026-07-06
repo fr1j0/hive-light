@@ -23,6 +23,32 @@ public func gitBranch(forCwd cwd: String) -> String? {
     }
 }
 
+/// Identity of the repository containing `cwd` — the MAIN checkout's root,
+/// unifying worktrees and submodules with their parent repo (the panel's
+/// grouping key; stable-session-order spec). Same parent-walk as
+/// `gitBranch`, one file read per level, never a subprocess. Nil for
+/// non-repos.
+public func gitRepoRoot(forCwd cwd: String) -> String? {
+    guard !cwd.isEmpty else { return nil }
+    var dir = URL(fileURLWithPath: cwd).standardizedFileURL
+    while true {
+        let dotGit = dir.appendingPathComponent(".git")
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: dotGit.path, isDirectory: &isDir) {
+            if isDir.boolValue { return dir.path }
+            // Worktree/submodule: the resolved gitdir lives under the main
+            // repo's .git — its prefix names the main root.
+            guard let gitDir = resolveGitdirFile(dotGit) else { return dir.path }
+            let path = gitDir.standardizedFileURL.path
+            if let range = path.range(of: "/.git/") { return String(path[..<range.lowerBound]) }
+            if path.hasSuffix("/.git") { return String(path.dropLast("/.git".count)) }
+            return dir.path   // unrecognized layout: the checkout itself
+        }
+        if dir.path == "/" { return nil }
+        dir = dir.deletingLastPathComponent()
+    }
+}
+
 /// "ref: refs/heads/<branch>" → branch (slashes preserved). Anything else —
 /// detached SHA, tag ref, empty — is nil.
 func parseGitHead(_ contents: String) -> String? {

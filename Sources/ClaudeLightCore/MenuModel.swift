@@ -43,23 +43,93 @@ public func summaryText(for counts: StatusCounts) -> String? {
     return parts.joined(separator: " · ")
 }
 
-/// Display order for the dropdown: most urgent first, then by project name.
-public func sortedForMenu(_ sessions: [Session]) -> [Session] {
-    func rank(_ status: SessionStatus) -> Int {
-        switch status {
-        case .error: return 0
-        case .attention: return 1
-        case .waiting: return 2
-        case .handoff: return 3
-        case .running: return 4
-        case .idle: return 5
+/// Display order for the dropdown: chronological, oldest first — the order
+/// the sessions' terminal tabs were opened. Status carries NO positional
+/// weight: since click-to-focus, the list is a navigation index, and indexes
+/// hold still (urgency sort made rows jump mid-click). Urgency stays visible
+/// through dot colors, timers, the summary, and the traffic light.
+/// `startedAt` is nil for files written by older hooks. The fallback must be
+/// STABLE above all (updatedAt moves on every event and would keep rows
+/// shuffling): nil sorts as distant past — un-stamped sessions clump at the
+/// top in fixed id order until the new hook stamps them on their next event.
+public enum SessionOrder: String, Sendable {
+    case opened    // pure chronological — terminal-tab order
+    case project   // repo blocks (by first-opened), chronological within
+}
+
+public func sortedForMenu(_ sessions: [Session],
+                          order: SessionOrder = .project) -> [Session] {
+    func startKey(_ s: Session) -> (Date, String) {
+        (s.startedAt ?? .distantPast, s.sessionID)
+    }
+    guard order == .project else {
+        return sessions.sorted { startKey($0) < startKey($1) }
+    }
+    // Group identity: the repo root (worktrees/subdirs unify with their main
+    // checkout), else the literal cwd. Never the NAME — basename collisions
+    // must not merge unrelated projects. Blocks hold the position of their
+    // earliest session; chronological within. Every comparison is a total
+    // order — no reliance on sort stability.
+    func groupKey(_ s: Session) -> String { s.groupKey }
+    var blockStart: [String: (Date, String)] = [:]
+    for s in sessions {
+        let k = groupKey(s), v = startKey(s)
+        if let existing = blockStart[k] {
+            if v < existing { blockStart[k] = v }
+        } else {
+            blockStart[k] = v
         }
     }
     return sessions.sorted { a, b in
-        let ra = rank(a.status), rb = rank(b.status)
-        if ra != rb { return ra < rb }
-        return a.project < b.project
+        let ka = groupKey(a), kb = groupKey(b)
+        if ka != kb { return blockStart[ka]! < blockStart[kb]! }
+        return startKey(a) < startKey(b)
     }
+}
+
+public extension Session {
+    /// Grouping identity: the repo root (worktrees/subdirs unify), else cwd.
+    /// Also the render block's stable ForEach id — unlike a member session's
+    /// id, it survives the earliest session expiring out of the block.
+    var groupKey: String { repoRoot ?? cwd }
+}
+
+/// Consecutive runs of the (already grouped-sorted) list sharing a repo
+/// identity — the panel's render blocks. Blocks of 2+ get the group
+/// treatment (header + rail + branch-led cards); singletons render classic.
+public func sessionBlocks(_ sessions: [Session]) -> [[Session]] {
+    var blocks: [[Session]] = []
+    for session in sessions {
+        let key = session.groupKey
+        if let last = blocks.last?.first, last.groupKey == key {
+            blocks[blocks.count - 1].append(session)
+        } else {
+            blocks.append([session])
+        }
+    }
+    return blocks
+}
+
+/// Header for a 2+ block: the repo directory's name (stable across the
+/// block, unlike per-session project names — a worktree session's folder
+/// name must not label the whole repo).
+public func blockTitle(_ block: [Session]) -> String {
+    guard let first = block.first else { return "" }
+    let root = first.repoRoot ?? first.cwd
+    return root.split(separator: "/").last.map(String.init) ?? first.project
+}
+
+/// Card title inside a 2+ block: the branch is what distinguishes siblings
+/// (the header owns the repo name). Non-repo/branchless sessions fall back
+/// to the project name; sessions living outside the repo root (worktrees,
+/// subdirectories) carry a dim locator suffix.
+public func groupedCardTitle(for session: Session) -> String {
+    var title = session.branch ?? session.project
+    if let root = session.repoRoot, root != session.cwd,
+       let base = session.cwd.split(separator: "/").last {
+        title += " · \(base)"
+    }
+    return title
 }
 
 /// Compact relative-age label for a session row.
