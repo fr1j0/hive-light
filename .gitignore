@@ -3,3 +3,9 @@
 build/
 *.xcuserstate
 dist/
+
+# Local scratch / tooling state (not part of the project)
+developer_log.json
+.bitacora/
+.superpowers/
+.vscode/
