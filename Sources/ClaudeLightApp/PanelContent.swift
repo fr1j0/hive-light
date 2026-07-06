@@ -30,7 +30,10 @@ struct PanelContent: View {
             $0 + min($1.visible.count, 8)
         }
         let usageRow = usageRowVisible ? 1 : 0
-        return watcher.sessions.count + subagentRows / 3 + usageRow
+        // Grouped mode adds one ~14pt header per block (~1/3 card height).
+        let headerRows = watcher.sessionOrder == .project
+            ? (sessionBlocks(watcher.sessions).count + 2) / 3 : 0
+        return watcher.sessions.count + subagentRows / 3 + usageRow + headerRows
     }
 
     /// The usage row is the door to the Usage view — visible when its toggle
@@ -128,14 +131,16 @@ struct PanelContent: View {
                 // tiny repo header and branch-led cards — one card grammar
                 // everywhere; the project name always lives in the header,
                 // never sometimes-in/sometimes-out of the card.
-                ForEach(sessionBlocks(watcher.sessions), id: \.first!.sessionID) { block in
+                // id = groupKey: stable when the block's earliest session
+                // expires (a member-session id would reset the whole block's
+                // view state on expiry — the very churn this feature kills).
+                ForEach(sessionBlocks(watcher.sessions), id: \.first!.groupKey) { block in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(blockTitle(block).uppercased())
                             .font(.system(size: 9, weight: .semibold))
                             .kerning(1)
                             .foregroundStyle(.tertiary)
                             .padding(.top, 4)
-                            .padding(.leading, 10)
                         ForEach(block, id: \.sessionID) { session in
                             card(session, now: now, grouped: true)
                         }

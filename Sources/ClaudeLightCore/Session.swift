@@ -43,7 +43,8 @@ public struct Session: Codable, Sendable, Equatable {
     /// When the session's first hook event was seen — the stable sort key for
     /// the panel (rows hold terminal-tab order; status never moves them). Set
     /// once by the hook, sticky across all later writes; nil for sessions
-    /// written by older hooks (sort falls back to updatedAt).
+    /// written by older hooks (those sort as distant past, in stable id
+    /// order — never by updatedAt, which moves on every event).
     public var startedAt: Date?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,

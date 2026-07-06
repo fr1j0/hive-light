@@ -45,9 +45,13 @@ struct SessionCard: View {
                 Circle()
                     .fill(PanelPalette.color(for: session.status))
                     .frame(width: 9, height: 9)
+                // Grouped cards speak the app's branch vocabulary — 11pt
+                // amber, exactly like the classic subtitle — so a branch ref
+                // looks identical grouped or not (one hierarchy, one color).
                 Text(grouped ? groupedCardTitle(for: session) : cardTitle(for: session))
-                    .font(.system(size: 13, weight: grouped ? .medium : .semibold))
-                    .foregroundStyle(grouped ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                    .font(.system(size: grouped ? 11 : 13, weight: grouped ? .regular : .semibold))
+                    .foregroundStyle(grouped ? AnyShapeStyle(PanelPalette.branchAmber)
+                                             : AnyShapeStyle(.primary))
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 // Gauge and timer share a center-aligned sub-stack: the ticks

@@ -70,7 +70,7 @@ public func sortedForMenu(_ sessions: [Session],
     // must not merge unrelated projects. Blocks hold the position of their
     // earliest session; chronological within. Every comparison is a total
     // order — no reliance on sort stability.
-    func groupKey(_ s: Session) -> String { s.repoRoot ?? s.cwd }
+    func groupKey(_ s: Session) -> String { s.groupKey }
     var blockStart: [String: (Date, String)] = [:]
     for s in sessions {
         let k = groupKey(s), v = startKey(s)
@@ -87,14 +87,21 @@ public func sortedForMenu(_ sessions: [Session],
     }
 }
 
+public extension Session {
+    /// Grouping identity: the repo root (worktrees/subdirs unify), else cwd.
+    /// Also the render block's stable ForEach id — unlike a member session's
+    /// id, it survives the earliest session expiring out of the block.
+    var groupKey: String { repoRoot ?? cwd }
+}
+
 /// Consecutive runs of the (already grouped-sorted) list sharing a repo
 /// identity — the panel's render blocks. Blocks of 2+ get the group
 /// treatment (header + rail + branch-led cards); singletons render classic.
 public func sessionBlocks(_ sessions: [Session]) -> [[Session]] {
     var blocks: [[Session]] = []
     for session in sessions {
-        let key = session.repoRoot ?? session.cwd
-        if let last = blocks.last?.first, (last.repoRoot ?? last.cwd) == key {
+        let key = session.groupKey
+        if let last = blocks.last?.first, last.groupKey == key {
             blocks[blocks.count - 1].append(session)
         } else {
             blocks.append([session])

@@ -88,7 +88,8 @@ hybrid (two grammars).
 ## Tests
 
 - Ordering: mixed statuses stay chronological; status flips don't reorder;
-  tie-break deterministic; nil `started_at` falls back to `updatedAt`.
+  tie-break deterministic; nil `started_at` sorts as distant past in stable
+  id order (never by `updatedAt`).
 - Merge: `started_at` set on first write, preserved across subsequent events
   (including events that omit cwd/transcript), unchanged by status flips.
 - Live gate: a multi-session afternoon — rows never move while the panel is
