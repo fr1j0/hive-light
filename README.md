@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/app-icon.png" alt="Claude Light" height="150">
+  <img src="assets/app-icon.png" alt="Hive Light" height="150">
 </p>
 
-<h1 align="center">Claude Light</h1>
+<h1 align="center">Hive Light</h1>
 
 <p align="center">A native macOS menu-bar traffic light for your Claude Code sessions — see what needs you, at a glance.</p>
 
@@ -10,13 +10,13 @@
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge"></a>
   <img alt="Platform: macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-000000?style=for-the-badge&logo=apple&logoColor=white">
   <img alt="Swift 5.9+" src="https://img.shields.io/badge/Swift-5.9%2B-F05138?style=for-the-badge&logo=swift&logoColor=white">
-  <a href="https://github.com/fr1j0/claude-light/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/fr1j0/claude-light?include_prereleases&style=for-the-badge&color=34C759"></a>
+  <a href="https://github.com/fr1j0/hive-light/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/fr1j0/hive-light?include_prereleases&style=for-the-badge&color=34C759"></a>
   <img alt="Made for Claude Code" src="https://img.shields.io/badge/Made_for-Claude_Code-D97757?style=for-the-badge">
 </p>
 
 ## Overview
 
-Claude Light watches every Claude Code session on your Mac and distills them into a single traffic light in the menu bar. One glance tells you whether an agent is waiting on you, still working, or done — no alt-tabbing through terminals to find out.
+Hive Light watches every Claude Code session on your Mac and distills them into a single traffic light in the menu bar. One glance tells you whether an agent is waiting on you, still working, or done — no alt-tabbing through terminals to find out.
 
 ## At a Glance
 
@@ -63,7 +63,7 @@ Click the icon for the full picture:
 
 ## How It Works
 
-Claude Light integrates with Claude Code through a small hook shim. On each Claude Code hook event, the shim writes that session's state to `~/.claude-light/sessions/`. The app watches that folder and updates its display the moment anything changes.
+Hive Light integrates with Claude Code through a small hook shim. On each Claude Code hook event, the shim writes that session's state to `~/.hive-light/sessions/`. The app watches that folder and updates its display the moment anything changes.
 
 For the full technical design, see the specs under [`docs/superpowers/specs/`](docs/superpowers/specs/).
 
@@ -72,26 +72,26 @@ For the full technical design, see the specs under [`docs/superpowers/specs/`](d
 ### Homebrew (recommended)
 
 ```bash
-brew tap fr1j0/claude-light
-brew trust fr1j0/claude-light   # newer Homebrew requires trusting third-party taps
-brew install --cask claude-light
+brew tap fr1j0/hive-light
+brew trust fr1j0/hive-light   # newer Homebrew requires trusting third-party taps
+brew install --cask hive-light
 ```
 
-Update any time with `brew upgrade --cask claude-light`. There is no auto-update or in-app update check — updates only arrive through Homebrew (or by downloading a newer release manually).
+Update any time with `brew upgrade --cask hive-light`. There is no auto-update or in-app update check — updates only arrive through Homebrew (or by downloading a newer release manually).
 
 ### From GitHub Releases
 
-Download the latest `.app` from [GitHub Releases](https://github.com/fr1j0/claude-light/releases) and verify the published SHA-256 checksum to confirm authenticity.
+Download the latest `.app` from [GitHub Releases](https://github.com/fr1j0/hive-light/releases) and verify the published SHA-256 checksum to confirm authenticity.
 
 > **Note — unsigned interim builds:** releases are currently ad-hoc signed while Apple notarization for the team is pending, so on first launch Gatekeeper may report the app as *"damaged and can't be opened"*. Clear the quarantine flag and launch again:
 >
 > ```bash
-> xattr -dr com.apple.quarantine "/Applications/Claude Light.app"
+> xattr -dr com.apple.quarantine "/Applications/Hive Light.app"
 > ```
 
 ## First Run
 
-1. Launch Claude Light — a traffic-light icon appears in the menu bar.
+1. Launch Hive Light — a traffic-light icon appears in the menu bar.
 2. Click the icon and choose **Install Claude Code hooks**. This safely merges the hook entries into `~/.claude/settings.json`.
 3. Your next Claude Code prompt lights up the menu.
 4. **Remove Claude Code hooks** cleanly undoes the change at any time.
@@ -103,19 +103,19 @@ Requires Swift 5.9+ and macOS 13+.
 ```bash
 swift build -c release          # build the app and hook binaries
 swift test                      # run the test suite
-bash scripts/package-app.sh     # produce dist/Claude Light.app
+bash scripts/package-app.sh     # produce dist/Hive Light.app
 ```
 
 ## Security & Trust
 
-Claude Light edits your settings and runs on every Claude Code hook, so it is fully open source and auditable — read the source and verify it for yourself. Current releases are interim builds **without** Developer ID signing or notarization (pending Apple enabling notarization for the team); until that lands, authenticity rests on the published SHA-256 checksums and the auditable source. Once notarization is enabled, official builds will be signed and notarized, removing the Gatekeeper warning and guaranteeing the binary has not been tampered with.
+Hive Light edits your settings and runs on every Claude Code hook, so it is fully open source and auditable — read the source and verify it for yourself. Current releases are interim builds **without** Developer ID signing or notarization (pending Apple enabling notarization for the team); until that lands, authenticity rests on the published SHA-256 checksums and the auditable source. Once notarization is enabled, official builds will be signed and notarized, removing the Gatekeeper warning and guaranteeing the binary has not been tampered with.
 
-Install only from the official [Releases](https://github.com/fr1j0/claude-light/releases), and verify the published SHA-256 checksum before running.
+Install only from the official [Releases](https://github.com/fr1j0/hive-light/releases), and verify the published SHA-256 checksum before running.
 
 Everything stays on your machine — no network, no telemetry; see [PRIVACY.md](PRIVACY.md) for exactly what the app touches. To report a vulnerability privately, see [SECURITY.md](SECURITY.md). Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License & Trademark
 
-Licensed under [Apache-2.0](LICENSE). The name "Claude Light", logo, and icon are **not** licensed under Apache-2.0 — see [TRADEMARK.md](TRADEMARK.md) for details.
+Licensed under [Apache-2.0](LICENSE). The name "Hive Light", logo, and icon are **not** licensed under Apache-2.0 — see [TRADEMARK.md](TRADEMARK.md) for details.
 
 "Claude" is a trademark of Anthropic. This is an independent community project, not affiliated with or endorsed by Anthropic.

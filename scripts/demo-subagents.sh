@@ -7,7 +7,7 @@ set -euo pipefail
 #   scripts/demo-subagents.sh          # seed the demo session + enable the toggle
 #   scripts/demo-subagents.sh --clean  # remove the demo session
 #
-# After seeding, open Claude Light — under "demo-fanout — running" you should see:
+# After seeding, open Hive Light — under "demo-fanout — running" you should see:
 #     ● Review Task 4
 #     ● Final whole-branch review
 #     ⚠ Implement Task 5
@@ -16,8 +16,8 @@ set -euo pipefail
 #     +1 more running
 # (Docs pass completes successfully, so it is intentionally hidden.)
 
-BUNDLE_ID="com.fr1j0.claude-light"
-STORE="$HOME/.claude-light/sessions"
+BUNDLE_ID="com.fr1j0.hive-light"
+STORE="$HOME/.hive-light/sessions"
 SESSION_ID="demo-fanout"
 SESSION_FILE="$STORE/$SESSION_ID.json"
 TRANSCRIPT="$STORE/$SESSION_ID.transcript.jsonl"
@@ -54,5 +54,5 @@ JSON
 defaults write "$BUNDLE_ID" showSubagents -bool true
 
 echo "Seeded demo session -> $SESSION_FILE"
-echo "Enabled 'Show subagents'. Open Claude Light and look under 'demo-fanout — running'."
+echo "Enabled 'Show subagents'. Open Hive Light and look under 'demo-fanout — running'."
 echo "Clean up with: scripts/demo-subagents.sh --clean"

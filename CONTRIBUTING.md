@@ -1,6 +1,6 @@
-# Contributing to Claude Light
+# Contributing to Hive Light
 
-Thanks for your interest! Claude Light is a young project with a deliberately tight
+Thanks for your interest! Hive Light is a young project with a deliberately tight
 scope: a native macOS menu-bar monitor for Claude Code sessions. Contributions are
 welcome — here's how to make yours land smoothly.
 
@@ -36,15 +36,15 @@ welcome — here's how to make yours land smoothly.
 - Tests that fail without your change and pass with it.
 - UI changes include a screenshot (light and dark menu bar if the icon is affected).
 - Match the style around you; no new dependencies without prior discussion —
-  Claude Light is pure Swift/SwiftUI with zero third-party dependencies, and
+  Hive Light is pure Swift/SwiftUI with zero third-party dependencies, and
   keeping it that way is a feature.
 
 ## Project layout
 
-- `Sources/ClaudeLightCore/` — pure logic (state, parsing, formatting). Most changes
+- `Sources/HiveLightCore/` — pure logic (state, parsing, formatting). Most changes
   belong here, with tests.
-- `Sources/ClaudeLightApp/` — the SwiftUI app shell, menu-bar UI, macOS integration.
-- `Sources/claude-light-hook/` — the hook shim binary Claude Code invokes.
+- `Sources/HiveLightApp/` — the SwiftUI app shell, menu-bar UI, macOS integration.
+- `Sources/hive-light-hook/` — the hook shim binary Claude Code invokes.
 - `scripts/` — packaging and release tooling.
 - `Casks/` — the Homebrew cask (mirrored to the tap on release).
 - `docs/superpowers/specs/` — design specs for shipped features.

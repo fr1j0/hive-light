@@ -57,17 +57,17 @@ jobs:
         run: |
           codesign --force --options runtime --timestamp \
             --sign "$MACOS_CERT_IDENTITY" \
-            "dist/Claude Light.app/Contents/MacOS/claude-light-hook"
+            "dist/Hive Light.app/Contents/MacOS/hive-light-hook"
           codesign --force --options runtime --timestamp \
             --sign "$MACOS_CERT_IDENTITY" \
-            "dist/Claude Light.app/Contents/MacOS/ClaudeLightApp"
+            "dist/Hive Light.app/Contents/MacOS/HiveLightApp"
           codesign --force --options runtime --timestamp \
             --sign "$MACOS_CERT_IDENTITY" \
-            "dist/Claude Light.app"
+            "dist/Hive Light.app"
 
       - name: Create zip
         run: |
-          ditto -c -k --keepParent "dist/Claude Light.app" dist/claude-light.zip
+          ditto -c -k --keepParent "dist/Hive Light.app" dist/hive-light.zip
 
       - name: Notarize app
         if: ${{ vars.NOTARIZE == 'true' }}
@@ -76,7 +76,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          xcrun notarytool submit dist/claude-light.zip \
+          xcrun notarytool submit dist/hive-light.zip \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
@@ -85,18 +85,18 @@ jobs:
       - name: Staple notarization ticket
         if: ${{ vars.NOTARIZE == 'true' }}
         run: |
-          xcrun stapler staple "dist/Claude Light.app"
+          xcrun stapler staple "dist/Hive Light.app"
 
       - name: Re-zip with stapled app
         if: ${{ vars.NOTARIZE == 'true' }}
         run: |
-          rm -f dist/claude-light.zip
-          ditto -c -k --keepParent "dist/Claude Light.app" dist/claude-light.zip
+          rm -f dist/hive-light.zip
+          ditto -c -k --keepParent "dist/Hive Light.app" dist/hive-light.zip
 
       - name: Generate checksum
         run: |
-          shasum -a 256 dist/claude-light.zip > dist/claude-light.zip.sha256
-          cat dist/claude-light.zip.sha256
+          shasum -a 256 dist/hive-light.zip > dist/hive-light.zip.sha256
+          cat dist/hive-light.zip.sha256
 
       - name: Compose release notes
         id: notes
@@ -104,13 +104,13 @@ jobs:
           if [ "${{ vars.NOTARIZE }}" = "true" ]; then
             echo "body=Signed with Developer ID and notarized by Apple." >> "$GITHUB_OUTPUT"
           else
-            echo 'body=Interim UNSIGNED build (Apple notarization not yet enabled for this team). First launch: right-click Claude Light.app and choose Open, or run: xattr -dr com.apple.quarantine "Claude Light.app". A signed & notarized release will replace this once notarization is available.' >> "$GITHUB_OUTPUT"
+            echo 'body=Interim UNSIGNED build (Apple notarization not yet enabled for this team). First launch: right-click Hive Light.app and choose Open, or run: xattr -dr com.apple.quarantine "Hive Light.app". A signed & notarized release will replace this once notarization is available.' >> "$GITHUB_OUTPUT"
           fi
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/claude-light.zip
+          subject-path: dist/hive-light.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -118,8 +118,8 @@ jobs:
           prerelease: ${{ vars.NOTARIZE != 'true' }}
           body: ${{ steps.notes.outputs.body }}
           files: |
-            dist/claude-light.zip
-            dist/claude-light.zip.sha256
+            dist/hive-light.zip
+            dist/hive-light.zip.sha256
 
       # Mirrors the rendered cask to the tap so `brew upgrade` serves this
       # release immediately. Skips gracefully when the secret is absent
@@ -135,20 +135,20 @@ jobs:
             exit 0
           fi
           VERSION="${GITHUB_REF_NAME#v}"
-          SHA="$(awk '{print $1}' dist/claude-light.zip.sha256)"
+          SHA="$(awk '{print $1}' dist/hive-light.zip.sha256)"
           TAP_DIR="$RUNNER_TEMP/tap"
           git clone --depth 1 \
-            "https://x-access-token:${TAP_PUSH_TOKEN}@github.com/fr1j0/homebrew-claude-light.git" \
+            "https://x-access-token:${TAP_PUSH_TOKEN}@github.com/fr1j0/homebrew-hive-light.git" \
             "$TAP_DIR"
-          cp "Casks/claude-light.rb" "$TAP_DIR/Casks/claude-light.rb"
-          bash scripts/render-cask.sh "$TAP_DIR/Casks/claude-light.rb" "$VERSION" "$SHA"
+          cp "Casks/hive-light.rb" "$TAP_DIR/Casks/hive-light.rb"
+          bash scripts/render-cask.sh "$TAP_DIR/Casks/hive-light.rb" "$VERSION" "$SHA"
           cd "$TAP_DIR"
-          git add Casks/claude-light.rb
+          git add Casks/hive-light.rb
           if git diff --cached --quiet; then
             echo "tap already up to date for $VERSION"
             exit 0
           fi
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "chore: claude-light $VERSION"
+              commit -m "chore: hive-light $VERSION"
           git push origin main
