@@ -15,6 +15,14 @@ struct HiveLightApp: App {
         // Rename migration (#133): adopt the old ~/.claude-light state before
         // the store (and its FSEvents watch) binds to the new directory.
         migrateLegacyStateDirIfNeeded()
+        // …and the old defaults domain before SessionWatcher reads .standard.
+        // Keys mirror SessionWatcher's setting keys plus the first-run flag.
+        if let legacyDefaults = UserDefaults(suiteName: "com.fr1j0.claude-light") {
+            migrateDefaults(from: legacyDefaults, to: .standard,
+                            keys: ["showSubagents", "showUsageStats", "showPlanLimits",
+                                   "sessionOrder", "notifyOnNeedsYou", "didOfferHookInstall"],
+                            migratedFlagKey: "didMigrateLegacyDefaults")
+        }
         let settings = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/settings.json")
         // Points at the bundled hook binary inside the running .app.
