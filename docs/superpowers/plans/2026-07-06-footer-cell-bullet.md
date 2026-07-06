@@ -14,7 +14,9 @@
 
 - Glyph is SF Symbol `hexagon` (hollow, pointy-top) at 9 pt — no custom `Shape`.
 - Color is `.tertiary`, applied to glyph and text together — no new color role.
-- 5 pt spacing between glyph and text; `HStack(alignment: .firstTextBaseline)`.
+- 5 pt spacing between glyph and text; default center-aligned `HStack`
+  (revised from `.firstTextBaseline` after the live check — baseline
+  alignment seated the lockup visibly low in the footer row).
 - Glyph is decorative: `.accessibilityHidden(true)`.
 - Footer only — no other panel surface gains the motif.
 - Work happens on branch `feat/footer-cell-bullet` (already created, spec committed).

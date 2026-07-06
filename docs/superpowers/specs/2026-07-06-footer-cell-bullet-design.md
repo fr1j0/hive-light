@@ -37,10 +37,12 @@ role, chrome pays rent).
 `PanelContent.swift` footer (currently `Text("Hive Light v\(version)")`,
 11 pt, `.tertiary`): wrap in an `HStack(spacing: 5)` of
 `Image(systemName: "hexagon")` at 9 pt plus the existing text, with the
-existing `.tertiary` style applied to the pair. Use
-`HStack(alignment: .firstTextBaseline)` — SF Symbols carry their own
-baseline, which seats the 9 pt glyph optically centered on the 11 pt text's
-cap height. The glyph is decorative:
+existing `.tertiary` style applied to the pair. Use a default
+(center-aligned) `HStack` — **revised after live check:** the spec first
+prescribed `.firstTextBaseline`, but the SF Symbol's ascent grows the pair's
+frame upward under baseline alignment, seating the whole lockup visibly low
+in the footer row. Center alignment seats both the glyph on the text and the
+pair in the row. The glyph is decorative:
 hidden from accessibility (the row already reads "Hive Light v\<version\>").
 
 ## Testing
