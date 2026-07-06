@@ -123,15 +123,43 @@ struct PanelContent: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
+            } else if watcher.sessionOrder == .project {
+                // Variant B (live-mockup verdict: headers are visual enough,
+                // a rail adds noise): 2+ repo blocks get a tiny header and
+                // branch-led cards; singletons stay classic. With every
+                // project single-sessioned this renders pixel-identical to
+                // the flat list — chrome only when it disambiguates.
+                ForEach(sessionBlocks(watcher.sessions), id: \.first!.sessionID) { block in
+                    if block.count >= 2 {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(blockTitle(block).uppercased())
+                                .font(.system(size: 9, weight: .semibold))
+                                .kerning(1)
+                                .foregroundStyle(.tertiary)
+                                .padding(.top, 4)
+                                .padding(.leading, 10)
+                            ForEach(block, id: \.sessionID) { session in
+                                card(session, now: now, grouped: true)
+                            }
+                        }
+                    } else {
+                        card(block[0], now: now, grouped: false)
+                    }
+                }
             } else {
                 ForEach(watcher.sessions, id: \.sessionID) { session in
-                    SessionCard(session: session,
-                                errorReason: watcher.errorReasons[session.sessionID],
-                                subagents: watcher.subagentsBySession[session.sessionID],
-                                now: now)
+                    card(session, now: now, grouped: false)
                 }
             }
         }
+    }
+
+    private func card(_ session: Session, now: Date, grouped: Bool) -> some View {
+        SessionCard(session: session,
+                    errorReason: watcher.errorReasons[session.sessionID],
+                    subagents: watcher.subagentsBySession[session.sessionID],
+                    now: now,
+                    grouped: grouped)
     }
 
     private var footer: some View {

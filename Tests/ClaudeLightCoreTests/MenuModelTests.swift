@@ -158,4 +158,36 @@ extension MenuModelTests {
         XCTAssertEqual(sortedForMenu([b2, a3, a1], order: .opened).map(\.sessionID),
                        ["a1", "b2", "a3"])
     }
+
+    // MARK: – render blocks (grouped mode, variant D)
+
+    func test_blocks_splitConsecutiveRuns_byRepoIdentity() {
+        let a1 = s(.running, id: "a1", started: 100, cwd: "/r/a", repoRoot: "/r/a")
+        let a2 = s(.idle, id: "a2", started: 150, cwd: "/r/a/.claude/worktrees/w", repoRoot: "/r/a")
+        let b = s(.running, id: "b", started: 200, cwd: "/r/b", repoRoot: "/r/b")
+        let blocks = sessionBlocks([a1, a2, b])
+        XCTAssertEqual(blocks.map { $0.map(\.sessionID) }, [["a1", "a2"], ["b"]])
+    }
+
+    func test_blockTitle_usesRepoRootName_notWorktreeFolder() {
+        // Even if the block's first session lives in a worktree folder, the
+        // header names the repo.
+        let wt = s(.running, id: "w", started: 100,
+                   cwd: "/r/claude-light/.claude/worktrees/docs", repoRoot: "/r/claude-light")
+        XCTAssertEqual(blockTitle([wt]), "claude-light")
+    }
+
+    func test_groupedCardTitle_branchLed_withWorktreeLocator() {
+        var inRoot = s(.running, id: "m", cwd: "/r/x", repoRoot: "/r/x")
+        inRoot.branch = "main"
+        XCTAssertEqual(groupedCardTitle(for: inRoot), "main")
+        var wt = s(.running, id: "w", cwd: "/r/x/.claude/worktrees/docs", repoRoot: "/r/x")
+        wt.branch = "docs/community-health"
+        XCTAssertEqual(groupedCardTitle(for: wt), "docs/community-health · docs")
+    }
+
+    func test_groupedCardTitle_branchless_fallsBackToProject() {
+        let plain = s(.running, project: "notes", id: "n", cwd: "/plain/notes")
+        XCTAssertEqual(groupedCardTitle(for: plain), "notes")
+    }
 }

@@ -87,6 +87,44 @@ public func sortedForMenu(_ sessions: [Session],
     }
 }
 
+/// Consecutive runs of the (already grouped-sorted) list sharing a repo
+/// identity — the panel's render blocks. Blocks of 2+ get the group
+/// treatment (header + rail + branch-led cards); singletons render classic.
+public func sessionBlocks(_ sessions: [Session]) -> [[Session]] {
+    var blocks: [[Session]] = []
+    for session in sessions {
+        let key = session.repoRoot ?? session.cwd
+        if let last = blocks.last?.first, (last.repoRoot ?? last.cwd) == key {
+            blocks[blocks.count - 1].append(session)
+        } else {
+            blocks.append([session])
+        }
+    }
+    return blocks
+}
+
+/// Header for a 2+ block: the repo directory's name (stable across the
+/// block, unlike per-session project names — a worktree session's folder
+/// name must not label the whole repo).
+public func blockTitle(_ block: [Session]) -> String {
+    guard let first = block.first else { return "" }
+    let root = first.repoRoot ?? first.cwd
+    return root.split(separator: "/").last.map(String.init) ?? first.project
+}
+
+/// Card title inside a 2+ block: the branch is what distinguishes siblings
+/// (the header owns the repo name). Non-repo/branchless sessions fall back
+/// to the project name; sessions living outside the repo root (worktrees,
+/// subdirectories) carry a dim locator suffix.
+public func groupedCardTitle(for session: Session) -> String {
+    var title = session.branch ?? session.project
+    if let root = session.repoRoot, root != session.cwd,
+       let base = session.cwd.split(separator: "/").last {
+        title += " · \(base)"
+    }
+    return title
+}
+
 /// Compact relative-age label for a session row.
 public func relativeTime(secondsAgo: TimeInterval) -> String {
     let s = max(0, Int(secondsAgo))

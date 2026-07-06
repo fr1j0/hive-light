@@ -26,6 +26,10 @@ struct SessionCard: View {
     let errorReason: String?
     let subagents: SubagentList?
     let now: Date
+    /// Inside a 2+ repo block (grouped order): the block header owns the
+    /// repo name, so the card title leads with the branch and the
+    /// branch-only subtitle is suppressed. Classic render when false.
+    var grouped: Bool = false
 
     /// Per-card, in-memory only — resets on relaunch by design.
     @State private var subagentsCollapsed = false
@@ -41,8 +45,9 @@ struct SessionCard: View {
                 Circle()
                     .fill(PanelPalette.color(for: session.status))
                     .frame(width: 9, height: 9)
-                Text(cardTitle(for: session))
-                    .font(.system(size: 13, weight: .semibold))
+                Text(grouped ? groupedCardTitle(for: session) : cardTitle(for: session))
+                    .font(.system(size: 13, weight: grouped ? .medium : .semibold))
+                    .foregroundStyle(grouped ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 // Gauge and timer share a center-aligned sub-stack: the ticks
@@ -66,7 +71,8 @@ struct SessionCard: View {
                         .frame(width: 28, alignment: .trailing)
                 }
             }
-            if let subtitle = cardSubtitle(for: session, errorReason: errorReason) {
+            if let subtitle = cardSubtitle(for: session, errorReason: errorReason),
+               !(grouped && subtitleShowsBranch(for: session)) {
                 let isBranch = subtitleShowsBranch(for: session)
                 HStack(spacing: 8) {
                     Text(subtitle)
