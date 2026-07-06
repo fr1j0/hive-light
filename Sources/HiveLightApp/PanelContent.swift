@@ -185,7 +185,16 @@ struct PanelContent: View {
             Spacer()
 
             if let version = Self.appVersion {
-                Text("Hive Light v\(version)").font(.system(size: 11)).foregroundStyle(.tertiary)
+                // The panel's one brand touch (see 2026-07-06 spec): a hollow hive
+                // cell folded into the wordmark — same tertiary as the text, so it
+                // reads as part of the name, never as a status signal.
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "hexagon")
+                        .font(.system(size: 9))
+                        .accessibilityHidden(true)
+                    Text("Hive Light v\(version)").font(.system(size: 11))
+                }
+                .foregroundStyle(.tertiary)
             }
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power").font(.system(size: 11))
