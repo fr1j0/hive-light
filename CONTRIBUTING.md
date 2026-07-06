@@ -6,9 +6,12 @@ welcome — here's how to make yours land smoothly.
 
 ## Before you code
 
-- **Bug fixes and small improvements:** open a PR directly, or file an issue first if
-  you want a sanity check.
-- **New features:** open an issue first and wait for a maintainer thumbs-up. The
+- **Bug fixes and small improvements:** open a PR directly, or file a
+  [bug report](https://github.com/fr1j0/claude-light/issues/new?template=bug_report.yml)
+  first if you want a sanity check.
+- **New features:** open a
+  [feature request](https://github.com/fr1j0/claude-light/issues/new?template=feature_request.yml)
+  first and wait for a maintainer thumbs-up. The
   project says no to a lot of reasonable ideas to stay small — for example, routine
   state transitions get passive UI, never notifications. An approved issue saves you
   from building something that won't be merged.

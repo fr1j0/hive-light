@@ -1,0 +1,32 @@
+name: Question
+description: You're stuck and the README didn't help.
+title: "[question] "
+labels: ["question", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Happy to help. Please check the README's Installation and How It Works sections
+        first — most setup questions are answered there.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      placeholder: "I'm trying to get the light working with sessions running inside tmux..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+    validations:
+      required: true
+
+  - type: textarea
+    id: stuck_where
+    attributes:
+      label: Where are you stuck?
+    validations:
+      required: true

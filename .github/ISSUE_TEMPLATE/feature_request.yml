@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a new capability for the menu-bar monitor.
+title: "[feat] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Claude Light has a deliberately tight scope: a native macOS menu-bar **monitor**
+        for Claude Code sessions. It shows state; it doesn't manage sessions, run
+        commands, or replace your terminal. One design principle worth knowing before
+        filing: notifications are reserved for exceptional events — routine transitions
+        get passive UI, never pings.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you see or do today, or what's painful?
+      placeholder: "With six parallel sessions I can't tell which one has been blocked the longest..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+      description: Roughly how would Claude Light address this?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed, including doing nothing.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope_check
+    attributes:
+      label: Scope check
+      options:
+        - label: This is about monitoring / surfacing session state, not managing sessions or driving Claude Code.
+          required: true
