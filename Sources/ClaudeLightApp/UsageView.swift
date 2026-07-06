@@ -6,6 +6,7 @@ import ClaudeLightCore
 /// Same flip mechanism and rhythm as SettingsPane.
 struct UsageView: View {
     let snapshot: UsageSnapshot
+    let limits: [PlanLimit]
     let now: Date
     let onBack: () -> Void
 
@@ -19,11 +20,15 @@ struct UsageView: View {
             header
             Divider().padding(.horizontal, -10)
 
-            if snapshot.windowBurn.isEmpty && days.isEmpty {
+            if snapshot.windowBurn.isEmpty && days.isEmpty && limits.isEmpty {
                 Text("No usage recorded yet")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             } else {
+                if !limits.isEmpty {
+                    planLimitsSection
+                    Divider().padding(.horizontal, -10)
+                }
                 currentWindow
                 Divider().padding(.horizontal, -10)
                 daily
@@ -53,6 +58,56 @@ struct UsageView: View {
                 Image(systemName: "chevron.left").font(.system(size: 10, weight: .bold))
                 Text("Back").font(.system(size: 12))
             }.hidden()
+        }
+    }
+
+    // MARK: - Plan limits (fetched — real percentages)
+
+    @ViewBuilder private var planLimitsSection: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            sectionTitle("Plan limits")
+            ForEach(limits, id: \.kind) { limit in
+                HStack(spacing: 8) {
+                    Text(limit.label)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 74, alignment: .leading)
+                        .lineLimit(1)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.primary.opacity(0.08))
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Self.levelColor(limitLevel(limit)))
+                                .frame(width: geo.size.width * CGFloat(min(limit.percent, 100)) / 100)
+                        }
+                    }
+                    .frame(height: 8)
+                    Text("\(limit.percent)%")
+                        .font(.system(size: 11)).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, alignment: .trailing)
+                    Text(resetLabel(limit))
+                        .font(.system(size: 10)).monospacedDigit()
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 58, alignment: .trailing)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private func resetLabel(_ limit: PlanLimit) -> String {
+        limitResetText(kind: limit.kind, resetsAt: limit.resetsAt, now: now).map { "↻ \($0)" } ?? ""
+    }
+
+    /// Capacity bars speak the context gauge's urgency language — never the
+    /// model categorical palette (capacity, not identity).
+    private static func levelColor(_ level: ContextLevel) -> Color {
+        switch level {
+        case .ok: return Color.primary.opacity(0.75)
+        case .warm: return PanelPalette.orange
+        case .hot: return PanelPalette.red
         }
     }
 
@@ -206,7 +261,7 @@ struct UsageView: View {
     }
 
     private var footnote: some View {
-        Text("Local only — window from your transcripts, history from Claude Code's stats cache. No caps are exposed, so bars compare models to each other, never to a limit.")
+        Text("Plan limits come from Anthropic with your Claude Code login (opt-in). Everything else is local — window from your transcripts, history from Claude Code's stats cache; those bars compare models to each other, never to a limit.")
             .font(.system(size: 10))
             .foregroundStyle(.tertiary)
     }

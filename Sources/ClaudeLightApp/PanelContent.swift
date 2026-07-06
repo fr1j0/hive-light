@@ -11,6 +11,7 @@ struct PanelContent: View {
     @State private var showingSettings = false
     @State private var showingUsage = false
     @StateObject private var usage = UsageScanner()
+    @StateObject private var limitsFetcher = LimitsFetcher()
     /// Past this estimated weight the list scrolls at a fixed height so the
     /// footer stays reachable. Below it, a plain stack hugs the content —
     /// the .window panel sizes to ideal height, and a bare ScrollView's
@@ -38,7 +39,9 @@ struct PanelContent: View {
                 SettingsPane(watcher: watcher) { showingSettings = false }
             } else if showingUsage {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    UsageView(snapshot: usage.snapshot, now: context.date) { showingUsage = false }
+                    UsageView(snapshot: usage.snapshot,
+                              limits: watcher.showPlanLimits ? limitsFetcher.limits : [],
+                              now: context.date) { showingUsage = false }
                 }
             } else {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -52,13 +55,18 @@ struct PanelContent: View {
             // close; immune to body re-evaluation (an inline Timer.publish here
             // would be recreated by every animationPhase tick and never fire).
             if watcher.showUsageStats { usage.refresh(force: true) }
+            if watcher.showPlanLimits { limitsFetcher.refresh(force: true) }
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 30_000_000_000)
                 if watcher.showUsageStats { usage.refresh() }
+                if watcher.showPlanLimits { limitsFetcher.refresh() }   // fetcher self-throttles to 5 min
             }
         }
         .onChange(of: watcher.showUsageStats) { enabled in
             if enabled { usage.refresh(force: true) }
+        }
+        .onChange(of: watcher.showPlanLimits) { enabled in
+            if enabled { limitsFetcher.refresh(force: true) }
         }
     }
 
@@ -86,8 +94,11 @@ struct PanelContent: View {
             // Stats strip (#83): the usage glance docks between the list and footer.
             if watcher.showUsageStats, !usage.snapshot.windowBurn.isEmpty {
                 Divider()
+                let sessionReset = watcher.showPlanLimits
+                    ? limitsFetcher.limits.first(where: { $0.kind == "session" })?.resetsAt
+                    : nil
                 UsageRow(burn: usage.snapshot.windowBurn,
-                         windowEnd: usage.snapshot.windowEnd,
+                         windowEnd: sessionReset ?? usage.snapshot.windowEnd,
                          now: now) { showingUsage = true }
             }
             Divider()
