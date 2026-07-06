@@ -88,6 +88,26 @@ final class UsageWindowTests: XCTestCase {
         XCTAssertNil(currentUsageWindow(now: Date(), timestamps: []))
     }
 
+    func test_window_gapOfExactlyFiveHours_opensFreshWindow() {
+        // The >= boundary: a gap of exactly windowLength opens a new window.
+        let old = iso("2026-07-06T00:00:00Z")
+        let fresh = iso("2026-07-06T05:00:00Z")
+        let now = iso("2026-07-06T06:00:00Z")
+        let w = currentUsageWindow(now: now, timestamps: [old, fresh])
+        XCTAssertEqual(w?.start, fresh)
+    }
+
+    func test_window_multipleGaps_anchorsAtLastGap() {
+        // Two ≥5h gaps: the anchor is the first activity after the LAST gap.
+        let a = iso("2026-07-05T00:00:00Z")
+        let b = iso("2026-07-05T08:00:00Z")   // gap 1 (8h)
+        let c = iso("2026-07-05T20:00:00Z")   // gap 2 (12h)
+        let now = iso("2026-07-05T21:00:00Z")
+        let w = currentUsageWindow(now: now, timestamps: [a, b, c])
+        XCTAssertEqual(w?.start, c)
+        XCTAssertEqual(w?.end, c.addingTimeInterval(5 * 3600))
+    }
+
     // MARK: usageByModel
 
     func test_usageByModel_sumsFiltersAndSortsDescending() {
