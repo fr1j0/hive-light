@@ -213,6 +213,27 @@ final class ApplyHookTests: XCTestCase {
 
     private let modelEntry = #"{"type":"assistant","message":{"role":"assistant","model":"claude-fable-5","usage":{"input_tokens":10}}}"#
 
+    // MARK: started_at — set once, sticky forever (stable session order)
+
+    func test_applyHook_setsStartedAt_onFirstWrite() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now)
+        XCTAssertEqual(try store.loadAll().first?.startedAt, now)
+    }
+
+    func test_applyHook_preservesStartedAt_acrossLaterEvents() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now)
+        // Later event, different time, no cwd/transcript — startedAt sticks.
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: nil, message: nil),
+                      to: store, now: now.addingTimeInterval(600))
+        let s = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(s.startedAt, now)
+        XCTAssertEqual(s.updatedAt, now.addingTimeInterval(600))
+    }
+
     func test_applyHook_capturesModel_fromTranscript() throws {
         let store = tempStore()
         let p = HookPayload(sessionID: "s1", hookEventName: "Stop", cwd: "/x/p", message: nil)

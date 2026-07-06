@@ -40,8 +40,11 @@ demonstrated demand. Add later if live use creates the itch.
   it on every later write — the same sticky-field merge `branch` and `model`
   already use in `ApplyHook` (`?? existing?.startedAt`, with `now` when no
   existing session).
-- **Fallback** for files written by an older hook (nil `started_at`): sort by
-  `updatedAt`. Transitional; self-heals as sessions cycle within hours.
+- **Fallback** for files written by an older hook (nil `started_at`): sort as
+  **distant past, id tie-break** — stability trumps correct order (an
+  `updatedAt` fallback would keep shuffling on every event, recreating the
+  bug during transition). Un-stamped sessions clump stably at the top;
+  self-heals as the new hook stamps each session on its next event.
 - Compatibility: old app ignores the unknown key; new app + old hook uses the
   fallback. No break in either direction.
 

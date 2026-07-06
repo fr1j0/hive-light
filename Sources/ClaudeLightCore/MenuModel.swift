@@ -43,22 +43,21 @@ public func summaryText(for counts: StatusCounts) -> String? {
     return parts.joined(separator: " · ")
 }
 
-/// Display order for the dropdown: most urgent first, then by project name.
+/// Display order for the dropdown: chronological, oldest first — the order
+/// the sessions' terminal tabs were opened. Status carries NO positional
+/// weight: since click-to-focus, the list is a navigation index, and indexes
+/// hold still (urgency sort made rows jump mid-click). Urgency stays visible
+/// through dot colors, timers, the summary, and the traffic light.
+/// `startedAt` is nil for files written by older hooks. The fallback must be
+/// STABLE above all (updatedAt moves on every event and would keep rows
+/// shuffling): nil sorts as distant past — un-stamped sessions clump at the
+/// top in fixed id order until the new hook stamps them on their next event.
 public func sortedForMenu(_ sessions: [Session]) -> [Session] {
-    func rank(_ status: SessionStatus) -> Int {
-        switch status {
-        case .error: return 0
-        case .attention: return 1
-        case .waiting: return 2
-        case .handoff: return 3
-        case .running: return 4
-        case .idle: return 5
-        }
-    }
-    return sessions.sorted { a, b in
-        let ra = rank(a.status), rb = rank(b.status)
-        if ra != rb { return ra < rb }
-        return a.project < b.project
+    sessions.sorted { a, b in
+        let ta = a.startedAt ?? .distantPast
+        let tb = b.startedAt ?? .distantPast
+        if ta != tb { return ta < tb }
+        return a.sessionID < b.sessionID
     }
 }
 

@@ -36,7 +36,10 @@ public func applyHook(_ payload: HookPayload, to store: SessionStore, now: Date,
             // Model refreshes with the same cadence as contextFraction:
             // only a transcript-bearing event re-reads it (#105).
             model: transcriptJSONL.flatMap { lastModelID(transcriptJSONL: $0) }
-                ?? existing?.model
+                ?? existing?.model,
+            // Set once at the session's first event, sticky forever — the
+            // panel's stable sort key (terminal-tab order).
+            startedAt: existing?.startedAt ?? now
         )
         try store.write(session)
     }

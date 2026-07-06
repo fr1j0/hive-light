@@ -35,11 +35,17 @@ public struct Session: Codable, Sendable, Equatable {
     /// Model id of the session's last assistant turn (#105); nil until a
     /// transcript-bearing event, and for sessions written by older hooks.
     public var model: String?
+    /// When the session's first hook event was seen — the stable sort key for
+    /// the panel (rows hold terminal-tab order; status never moves them). Set
+    /// once by the hook, sticky across all later writes; nil for sessions
+    /// written by older hooks (sort falls back to updatedAt).
+    public var startedAt: Date?
 
     public init(sessionID: String, status: SessionStatus, project: String, cwd: String,
                 updatedAt: Date, transcriptPath: String? = nil,
                 termProgram: String? = nil, tty: String? = nil, termSessionId: String? = nil,
-                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil, model: String? = nil) {
+                focusURL: String? = nil, detail: String? = nil, contextFraction: Double? = nil, branch: String? = nil, model: String? = nil,
+                startedAt: Date? = nil) {
         self.sessionID = sessionID
         self.status = status
         self.project = project
@@ -54,6 +60,7 @@ public struct Session: Codable, Sendable, Equatable {
         self.contextFraction = contextFraction
         self.branch = branch
         self.model = model
+        self.startedAt = startedAt
     }
 
     enum CodingKeys: String, CodingKey {
@@ -71,6 +78,7 @@ public struct Session: Codable, Sendable, Equatable {
         case contextFraction = "context_fraction"
         case branch
         case model
+        case startedAt = "started_at"
     }
 }
 
