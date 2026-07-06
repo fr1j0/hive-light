@@ -45,18 +45,20 @@ anything; the only movement is insertion when the user opens a session.
   alongside `branch` (same walk, refreshes with cwd, nil for non-repos).
 - Urgency is NOT an option — it was the disease, not a preference.
 
-**Grouped render (mockup variant B, chosen over rail/tray/fused/project-card
-alternatives):** a block of 2+ sessions gets a tiny uppercase repo header
-(`blockTitle` — the repo directory's name, never a worktree folder's), and
-its cards lead with the **branch** (`groupedCardTitle`: branch ?? project,
-plus a dim `· <dir>` locator for sessions outside the repo root); the
-branch-only subtitle is suppressed (it moved into the title). Singleton
-blocks render classic, untouched — with every project single-sessioned the
-grouped panel is pixel-identical to the flat one; chrome appears only when
-it disambiguates. Rejected on live/mockup review: connecting rails (reads
-as status color or over-nests against subagent rails), group trays (third
-background level), fused/project cards (restyle the session line
-inconsistently between grouped and singleton contexts).
+**Grouped render (ORIGINAL mockup variant B — live verdict):** EVERY block,
+including singletons, gets the tiny uppercase repo header (`blockTitle` —
+the repo directory's name, never a worktree folder's), and every card leads
+with the **branch** (`groupedCardTitle`: branch ?? project, plus a dim
+`· <dir>` locator for sessions outside the repo root); the branch-only
+subtitle is suppressed (it moved into the title). One card grammar
+everywhere: the project name always lives in the header, the card always
+names the branch — chosen over a singleton-classic hybrid precisely because
+mixing the two grammars made the name's location inconsistent. Costs one
+~14pt header line per singleton project; judged worth it live. Rejected on
+live/mockup review: connecting rails (reads as status color; over-nests
+against subagent rails), group trays (third background level), fused/
+project cards (restyle the session line inconsistently), singleton-classic
+hybrid (two grammars).
 
 ## Start time — schema addition
 
