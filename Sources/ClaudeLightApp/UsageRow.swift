@@ -43,7 +43,7 @@ struct UsageRow: View {
     var body: some View {
         Button(action: onOpen) {
             VStack(alignment: .leading, spacing: 5) {
-                microbar
+                if !burn.isEmpty { microbar }
                 chips
             }
             .contentShape(Rectangle())
@@ -68,10 +68,17 @@ struct UsageRow: View {
             }
         }
         .frame(height: 5)
+        .clipped()
     }
 
     private var chips: some View {
         HStack(spacing: 10) {
+            if burn.isEmpty {
+                Text("USAGE")
+                    .font(.system(size: 9, weight: .semibold))
+                    .kerning(0.5)
+                    .foregroundStyle(.tertiary)
+            }
             ForEach(burn.prefix(Self.maxChips), id: \.model) { b in
                 HStack(spacing: 5) {
                     RoundedRectangle(cornerRadius: 2)

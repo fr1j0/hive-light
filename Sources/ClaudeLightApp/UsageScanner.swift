@@ -38,6 +38,9 @@ final class UsageScanner: ObservableObject {
               force || Date().timeIntervalSince(lastScan) >= Self.minScanInterval else { return }
         scanning = true
         let cache = self.cache   // bind before detaching (CI strict concurrency)
+        // Sendable-safety: `cache` is a non-Sendable class, but access is
+        // serialized — the `scanning` flag admits one scan at a time and
+        // the await establishes happens-before between scans.
         Task { [weak self] in
             let snap = await Task.detached(priority: .utility) {
                 Self.scan(cache: cache)

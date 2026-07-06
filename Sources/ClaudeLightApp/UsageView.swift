@@ -87,18 +87,17 @@ struct UsageView: View {
                         .font(.system(size: 11)).monospacedDigit()
                         .foregroundStyle(.secondary)
                         .frame(width: 32, alignment: .trailing)
-                    Text(resetLabel(limit))
-                        .font(.system(size: 10)).monospacedDigit()
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 58, alignment: .trailing)
-                        .lineLimit(1)
+                    HStack(spacing: 3) {
+                        if let reset = limitResetText(kind: limit.kind, resetsAt: limit.resetsAt, now: now) {
+                            Image(systemName: "arrow.clockwise").font(.system(size: 8))
+                            Text(reset).font(.system(size: 10)).monospacedDigit()
+                        }
+                    }
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 58, alignment: .trailing)
                 }
             }
         }
-    }
-
-    private func resetLabel(_ limit: PlanLimit) -> String {
-        limitResetText(kind: limit.kind, resetsAt: limit.resetsAt, now: now).map { "↻ \($0)" } ?? ""
     }
 
     /// Capacity bars speak the context gauge's urgency language — never the
@@ -206,6 +205,7 @@ struct UsageView: View {
                             }
                         }
                         .frame(height: 8)
+                        .clipped()
                         .help(hoverText(day))
                         Text(tokenText(day.total))
                             .font(.system(size: 10)).monospacedDigit()
@@ -290,17 +290,22 @@ struct UsageView: View {
     private static let dayKey: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
         return f
     }()
     private static let dayOut: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "MMM d"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
         return f
     }()
     private static let wallClock: DateFormatter = {
         let f = DateFormatter()
         f.timeStyle = .short
         f.dateStyle = .none
+        f.calendar = Calendar(identifier: .gregorian)
         return f
     }()
     private static func dayLabel(_ key: String) -> String {

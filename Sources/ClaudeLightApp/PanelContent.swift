@@ -29,8 +29,16 @@ struct PanelContent: View {
             // rows), so cap its contribution to the panel-size estimate.
             $0 + min($1.visible.count, 8)
         }
-        let usageRow = (watcher.showUsageStats && !usage.snapshot.windowBurn.isEmpty) ? 1 : 0
+        let usageRow = usageRowVisible ? 1 : 0
         return watcher.sessions.count + subagentRows / 3 + usageRow
+    }
+
+    /// The usage row is the door to the Usage view — visible when its toggle
+    /// is on and EITHER local burn or fetched limits have something to show.
+    private var usageRowVisible: Bool {
+        watcher.showUsageStats
+            && (!usage.snapshot.windowBurn.isEmpty
+                || (watcher.showPlanLimits && !limitsFetcher.limits.isEmpty))
     }
 
     var body: some View {
@@ -92,7 +100,7 @@ struct PanelContent: View {
             }
 
             // Stats strip (#83): the usage glance docks between the list and footer.
-            if watcher.showUsageStats, !usage.snapshot.windowBurn.isEmpty {
+            if usageRowVisible {
                 Divider()
                 let sessionReset = watcher.showPlanLimits
                     ? limitsFetcher.limits.first(where: { $0.kind == "session" })?.resetsAt

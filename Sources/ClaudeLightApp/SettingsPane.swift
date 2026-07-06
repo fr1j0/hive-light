@@ -36,6 +36,11 @@ struct SettingsPane: View {
             VStack(alignment: .leading, spacing: 10) {
                 Toggle("Show subagents", isOn: $watcher.showSubagents)
                 Toggle("Show usage stats", isOn: $watcher.showUsageStats)
+                Text("Usage row in the panel · click it for details")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 18)
                 Toggle("Show plan limits", isOn: $watcher.showPlanLimits)
                 Text("Reads your Claude Code login from the Keychain to fetch limits from Anthropic. Nothing else is sent.")
                     .font(.system(size: 10))
