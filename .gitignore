@@ -9,3 +9,6 @@ developer_log.json
 .bitacora/
 .superpowers/
 .vscode/
+
+# Claude Code workspace (worktrees, local session state)
+.claude/

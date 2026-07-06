@@ -2,21 +2,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "ClaudeLight",
+    name: "HiveLight",
     platforms: [.macOS(.v13)],
     targets: [
-        .target(name: "ClaudeLightCore"),
+        .target(name: "HiveLightCore"),
         .executableTarget(
-            name: "claude-light-hook",
-            dependencies: ["ClaudeLightCore"]
+            name: "hive-light-hook",
+            dependencies: ["HiveLightCore"]
         ),
         .executableTarget(
-            name: "ClaudeLightApp",
-            dependencies: ["ClaudeLightCore"]
+            name: "HiveLightApp",
+            dependencies: ["HiveLightCore"]
         ),
         .testTarget(
-            name: "ClaudeLightCoreTests",
-            dependencies: ["ClaudeLightCore"]
+            name: "HiveLightCoreTests",
+            dependencies: ["HiveLightCore"]
         ),
     ]
 )
