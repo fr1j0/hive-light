@@ -9,6 +9,8 @@ import ClaudeLightCore
 struct PanelContent: View {
     @ObservedObject var watcher: SessionWatcher
     @State private var showingSettings = false
+    @State private var showingUsage = false
+    @StateObject private var usage = UsageScanner()
     /// Past this estimated weight the list scrolls at a fixed height so the
     /// footer stays reachable. Below it, a plain stack hugs the content —
     /// the .window panel sizes to ideal height, and a bare ScrollView's
@@ -26,13 +28,19 @@ struct PanelContent: View {
             // rows), so cap its contribution to the panel-size estimate.
             $0 + min($1.visible.count, 8)
         }
-        return watcher.sessions.count + subagentRows / 3
+        let usageRow = (watcher.showUsageStats && !usage.snapshot.windowBurn.isEmpty) ? 1 : 0
+        return watcher.sessions.count + subagentRows / 3 + usageRow
     }
 
     var body: some View {
         Group {
             if showingSettings {
                 SettingsPane(watcher: watcher) { showingSettings = false }
+            } else if showingUsage {
+                Text("Usage — coming in Task 6")
+                    .font(.system(size: 12))
+                    .padding(12)
+                    .onTapGesture { showingUsage = false }
             } else {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     sessionList(now: context.date)
@@ -40,6 +48,10 @@ struct PanelContent: View {
             }
         }
         .frame(width: 340)
+        .onAppear { if watcher.showUsageStats { usage.refresh(force: true) } }
+        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+            if watcher.showUsageStats { usage.refresh() }
+        }
     }
 
     @ViewBuilder
@@ -63,7 +75,13 @@ struct PanelContent: View {
                 sessionRows(now: now)
             }
 
-            // Stats strip (#83) docks between this divider and the footer.
+            // Stats strip (#83): the usage glance docks between the list and footer.
+            if watcher.showUsageStats, !usage.snapshot.windowBurn.isEmpty {
+                Divider()
+                UsageRow(burn: usage.snapshot.windowBurn,
+                         windowEnd: usage.snapshot.windowEnd,
+                         now: now) { showingUsage = true }
+            }
             Divider()
             footer
         }

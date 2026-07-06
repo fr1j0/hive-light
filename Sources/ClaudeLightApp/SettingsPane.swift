@@ -35,6 +35,7 @@ struct SettingsPane: View {
             // below it, beyond the base 10pt stack spacing.
             VStack(alignment: .leading, spacing: 10) {
                 Toggle("Show subagents", isOn: $watcher.showSubagents)
+                Toggle("Show usage stats", isOn: $watcher.showUsageStats)
                 if watcher.launchAtLoginAvailable {
                     Toggle("Launch at login", isOn: Binding(
                         get: { watcher.launchAtLoginEnabled },
