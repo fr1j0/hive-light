@@ -29,9 +29,9 @@ final class UsageScanner: ObservableObject {
     /// history back to the last ≥5h idle gap; 24h reaches it in practice
     /// (if no gap exists in 24h, the anchor approximates at the oldest
     /// scanned activity).
-    static let lookback: TimeInterval = 24 * 3600
-    static let maxTailBytes = 4 * 1024 * 1024
-    static let minScanInterval: TimeInterval = 30
+    nonisolated static let lookback: TimeInterval = 24 * 3600
+    nonisolated static let maxTailBytes = 4 * 1024 * 1024
+    nonisolated static let minScanInterval: TimeInterval = 30
 
     func refresh(force: Bool = false) {
         guard !scanning,
