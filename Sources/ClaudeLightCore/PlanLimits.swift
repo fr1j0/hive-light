@@ -75,17 +75,18 @@ public func limitLevel(_ limit: PlanLimit) -> ContextLevel {
     }
 }
 
-private let weekdayClock: DateFormatter = {
-    let f = DateFormatter()
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.dateFormat = "EEE H:mm"
-    return f
-}()
-
-/// Session limits show a countdown ("2h 36m"); weekly limits show the
-/// wall-clock reset ("Wed 2:00"). Nil when the server sent no reset.
+/// Compact countdown for any bucket: "2h 36m" under a day, "3d 10h" beyond
+/// (a weekday wall-clock like "Wed 2:00" clipped the row's reset column and
+/// read worse at a glance — live-test verdict). `kind` kept for signature
+/// stability; every kind formats the same way. Nil when the server sent no
+/// reset.
 public func limitResetText(kind: String, resetsAt: Date?, now: Date) -> String? {
     guard let resetsAt else { return nil }
-    return kind == "session" ? resetText(until: resetsAt, now: now)
-                             : weekdayClock.string(from: resetsAt)
+    let remaining = resetsAt.timeIntervalSince(now)
+    if remaining >= 24 * 3600 {
+        let days = Int(remaining) / 86_400
+        let hours = (Int(remaining) % 86_400) / 3_600
+        return "\(days)d \(hours)h"
+    }
+    return resetText(until: resetsAt, now: now)
 }

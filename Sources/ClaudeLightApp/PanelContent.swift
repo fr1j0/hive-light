@@ -102,11 +102,10 @@ struct PanelContent: View {
             // Stats strip (#83): the usage glance docks between the list and footer.
             if usageRowVisible {
                 Divider()
-                let sessionReset = watcher.showPlanLimits
-                    ? limitsFetcher.limits.first(where: { $0.kind == "session" })?.resetsAt
-                    : nil
+                let limits = watcher.showPlanLimits ? limitsFetcher.limits : []
                 UsageRow(burn: usage.snapshot.windowBurn,
-                         windowEnd: sessionReset ?? usage.snapshot.windowEnd,
+                         limits: limits,
+                         windowEnd: usage.snapshot.windowEnd,
                          now: now) { showingUsage = true }
             }
             Divider()

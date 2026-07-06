@@ -89,7 +89,7 @@ struct UsageView: View {
                         .frame(width: 32, alignment: .trailing)
                     HStack(spacing: 3) {
                         if let reset = limitResetText(kind: limit.kind, resetsAt: limit.resetsAt, now: now) {
-                            Image(systemName: "arrow.clockwise").font(.system(size: 8))
+                            Image(systemName: "timer").font(.system(size: 8))
                             Text(reset).font(.system(size: 10)).monospacedDigit()
                         }
                     }
@@ -119,7 +119,7 @@ struct UsageView: View {
                 let maxTokens = snapshot.windowBurn.first?.tokens ?? 1
                 ForEach(snapshot.windowBurn, id: \.model) { b in
                     HStack(spacing: 8) {
-                        modelLabel(b.model).frame(width: 52, alignment: .leading)
+                        modelLabel(b.model).frame(width: 66, alignment: .leading)
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 4)
@@ -138,7 +138,7 @@ struct UsageView: View {
                 }
                 if let end = snapshot.windowEnd {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.clockwise").font(.system(size: 9))
+                        Image(systemName: "timer").font(.system(size: 9))
                         Text("window resets in ").font(.system(size: 11))
                         + Text(resetText(until: end, now: now))
                             .font(.system(size: 11, weight: .semibold))
@@ -264,6 +264,9 @@ struct UsageView: View {
         Text("Plan limits come from Anthropic with your Claude Code login (opt-in). Everything else is local — window from your transcripts, history from Claude Code's stats cache; those bars compare models to each other, never to a limit.")
             .font(.system(size: 10))
             .foregroundStyle(.tertiary)
+            // Wrap, don't truncate: the .window panel sizes to ideal height,
+            // which single-lines an unconstrained Text into an ellipsis.
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func sectionTitle(_ s: String) -> some View {

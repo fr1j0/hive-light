@@ -47,15 +47,15 @@ final class PlanLimitsTests: XCTestCase {
         XCTAssertEqual(limitLevel(limit(10, severity: "exceeded")), .hot)
     }
 
-    func test_limitResetText_sessionCountdown_weeklyWallclock() {
+    func test_limitResetText_compactCountdown() {
         let now = ISO8601DateFormatter().date(from: "2026-07-06T02:24:00Z")!
         let sessionReset = ISO8601DateFormatter().date(from: "2026-07-06T05:00:00Z")!
         XCTAssertEqual(limitResetText(kind: "session", resetsAt: sessionReset, now: now), "2h 36m")
         XCTAssertNil(limitResetText(kind: "session", resetsAt: nil, now: now))
-        // Weekly form is weekday + time; exact string depends on local timezone,
-        // so assert shape, not value.
-        let weekly = limitResetText(kind: "weekly_all", resetsAt: sessionReset, now: now)
-        XCTAssertNotNil(weekly)
-        XCTAssertFalse(weekly!.contains("h "))   // not a countdown
+        // Beyond a day, every kind compresses to days+hours ("3d 10h").
+        let weekly = ISO8601DateFormatter().date(from: "2026-07-09T12:24:00Z")!
+        XCTAssertEqual(limitResetText(kind: "weekly_all", resetsAt: weekly, now: now), "3d 10h")
+        // Under a day, weekly kinds count down like the session does.
+        XCTAssertEqual(limitResetText(kind: "weekly_all", resetsAt: sessionReset, now: now), "2h 36m")
     }
 }
