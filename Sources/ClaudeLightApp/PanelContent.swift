@@ -37,10 +37,9 @@ struct PanelContent: View {
             if showingSettings {
                 SettingsPane(watcher: watcher) { showingSettings = false }
             } else if showingUsage {
-                Text("Usage — coming in Task 6")
-                    .font(.system(size: 12))
-                    .padding(12)
-                    .onTapGesture { showingUsage = false }
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    UsageView(snapshot: usage.snapshot, now: context.date) { showingUsage = false }
+                }
             } else {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     sessionList(now: context.date)
