@@ -7,6 +7,10 @@ struct SettingsPane: View {
     @ObservedObject var watcher: SessionWatcher
     let onBack: () -> Void
 
+    /// Attributes-only Keychain check (no consent prompt) — gates the
+    /// plan-limits toggle for API-key/Bedrock users, who have no quota.
+    private let hasOAuthLogin = LimitsFetcher.oauthLoginPresent()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -35,6 +39,21 @@ struct SettingsPane: View {
             // below it, beyond the base 10pt stack spacing.
             VStack(alignment: .leading, spacing: 10) {
                 Toggle("Show subagents", isOn: $watcher.showSubagents)
+                Toggle("Show usage stats", isOn: $watcher.showUsageStats)
+                Text("Usage row in the panel · click it for details")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 18)
+                Toggle("Show plan limits", isOn: $watcher.showPlanLimits)
+                    .disabled(!hasOAuthLogin)
+                Text(hasOAuthLogin
+                     ? "Reads your Claude Code login from the Keychain to fetch limits from Anthropic. Nothing else is sent."
+                     : "Requires a Claude subscription login in Claude Code — API-key and Bedrock/Vertex setups have no plan limits.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 18)
                 if watcher.launchAtLoginAvailable {
                     Toggle("Launch at login", isOn: Binding(
                         get: { watcher.launchAtLoginEnabled },

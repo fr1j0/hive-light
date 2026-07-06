@@ -9,6 +9,9 @@ import ClaudeLightCore
 struct PanelContent: View {
     @ObservedObject var watcher: SessionWatcher
     @State private var showingSettings = false
+    @State private var showingUsage = false
+    @StateObject private var usage = UsageScanner()
+    @StateObject private var limitsFetcher = LimitsFetcher()
     /// Past this estimated weight the list scrolls at a fixed height so the
     /// footer stays reachable. Below it, a plain stack hugs the content —
     /// the .window panel sizes to ideal height, and a bare ScrollView's
@@ -26,13 +29,28 @@ struct PanelContent: View {
             // rows), so cap its contribution to the panel-size estimate.
             $0 + min($1.visible.count, 8)
         }
-        return watcher.sessions.count + subagentRows / 3
+        let usageRow = usageRowVisible ? 1 : 0
+        return watcher.sessions.count + subagentRows / 3 + usageRow
+    }
+
+    /// The usage row is the door to the Usage view — visible when its toggle
+    /// is on and EITHER local burn or fetched limits have something to show.
+    private var usageRowVisible: Bool {
+        watcher.showUsageStats
+            && (!usage.snapshot.windowBurn.isEmpty
+                || (watcher.showPlanLimits && !limitsFetcher.limits.isEmpty))
     }
 
     var body: some View {
         Group {
             if showingSettings {
                 SettingsPane(watcher: watcher) { showingSettings = false }
+            } else if showingUsage {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    UsageView(snapshot: usage.snapshot,
+                              limits: watcher.showPlanLimits ? limitsFetcher.limits : [],
+                              now: context.date) { showingUsage = false }
+                }
             } else {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     sessionList(now: context.date)
@@ -40,6 +58,24 @@ struct PanelContent: View {
             }
         }
         .frame(width: 340)
+        .task {
+            // View-identity lifetime: starts when the panel opens, cancels on
+            // close; immune to body re-evaluation (an inline Timer.publish here
+            // would be recreated by every animationPhase tick and never fire).
+            if watcher.showUsageStats { usage.refresh(force: true) }
+            if watcher.showPlanLimits { limitsFetcher.refresh(force: true) }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                if watcher.showUsageStats { usage.refresh() }
+                if watcher.showPlanLimits { limitsFetcher.refresh() }   // fetcher self-throttles to 5 min
+            }
+        }
+        .onChange(of: watcher.showUsageStats) { enabled in
+            if enabled { usage.refresh(force: true) }
+        }
+        .onChange(of: watcher.showPlanLimits) { enabled in
+            if enabled { limitsFetcher.refresh(force: true) }
+        }
     }
 
     @ViewBuilder
@@ -63,7 +99,15 @@ struct PanelContent: View {
                 sessionRows(now: now)
             }
 
-            // Stats strip (#83) docks between this divider and the footer.
+            // Stats strip (#83): the usage glance docks between the list and footer.
+            if usageRowVisible {
+                Divider()
+                let limits = watcher.showPlanLimits ? limitsFetcher.limits : []
+                UsageRow(burn: usage.snapshot.windowBurn,
+                         limits: limits,
+                         windowEnd: usage.snapshot.windowEnd,
+                         now: now) { showingUsage = true }
+            }
             Divider()
             footer
         }

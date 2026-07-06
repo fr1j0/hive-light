@@ -24,6 +24,16 @@ final class SessionWatcher: ObservableObject {
             reload()
         }
     }
+    @Published var showUsageStats: Bool {
+        didSet {
+            UserDefaults.standard.set(showUsageStats, forKey: Self.showUsageStatsKey)
+        }
+    }
+    @Published var showPlanLimits: Bool {
+        didSet {
+            UserDefaults.standard.set(showPlanLimits, forKey: Self.showPlanLimitsKey)
+        }
+    }
     @Published private(set) var launchAtLoginEnabled: Bool = false
 
     /// SMAppService needs a real .app bundle; unbundled dev builds hide the row.
@@ -39,6 +49,8 @@ final class SessionWatcher: ObservableObject {
     var notificationsAvailable: Bool { SessionNotifier.available }
 
     private static let showSubagentsKey = "showSubagents"
+    private static let showUsageStatsKey = "showUsageStats"
+    private static let showPlanLimitsKey = "showPlanLimits"
     private static let notifyKey = "notifyOnNeedsYou"
     private let notifier = SessionNotifier()
     /// Previous reload's statuses; nil until the first reload has taken a
@@ -57,6 +69,8 @@ final class SessionWatcher: ObservableObject {
         self.store = store
         self.installer = installer
         self.showSubagents = UserDefaults.standard.bool(forKey: Self.showSubagentsKey)
+        self.showUsageStats = UserDefaults.standard.bool(forKey: Self.showUsageStatsKey)
+        self.showPlanLimits = UserDefaults.standard.bool(forKey: Self.showPlanLimitsKey)
         self.notifyOnNeedsYou = UserDefaults.standard.bool(forKey: Self.notifyKey)
     }
 
