@@ -66,7 +66,7 @@ struct UsageView: View {
     @ViewBuilder private var planLimitsSection: some View {
         VStack(alignment: .leading, spacing: 3) {
             sectionTitle("Plan limits")
-            ForEach(limits, id: \.kind) { limit in
+            ForEach(limits, id: \.label) { limit in
                 HStack(spacing: 8) {
                     Text(limit.label)
                         .font(.system(size: 10))
