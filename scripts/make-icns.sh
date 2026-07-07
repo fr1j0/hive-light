@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Regenerates Resources/AppIcon.icns from assets/app-icon.png — the rendered
-# icon that is also the README hero. The artwork is scaled to fit Apple's
+# Regenerates Resources/AppIcon.icns from assets/app-icon.png — the app-icon
+# artwork that is also the README hero. The artwork is scaled to fit Apple's
 # icon grid (an 824px box centered on a transparent 1024px canvas) so it
 # sits at the same size as neighboring Dock icons.
 # Requires only the Xcode command-line tools (swift, sips, iconutil).
