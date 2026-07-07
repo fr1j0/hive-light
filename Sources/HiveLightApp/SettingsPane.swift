@@ -190,11 +190,19 @@ struct SettingsPane: View {
         Button {
             if watcher.hooksInstalled { watcher.removeHooks() } else { watcher.installHooks() }
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "link").font(.system(size: 11))
-                Text(watcher.hooksInstalled ? "Remove Claude Code hooks" : "Install Claude Code hooks")
-                    .font(.system(size: 12))
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Image(systemName: "link").font(.system(size: 11))
+                    Text(watcher.hooksInstalled ? "Remove Claude Code hooks" : "Install Claude Code hooks")
+                        .font(.system(size: 12))
+                    Spacer(minLength: 0)
+                }
+                // Hook config is snapshotted per Claude Code session, so the
+                // click's effect is invisible until sessions cycle — say so.
+                Text("Changes apply to new Claude Code sessions — ones already running keep their current hooks until they end.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
