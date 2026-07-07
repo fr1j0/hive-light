@@ -62,12 +62,16 @@ struct SettingsPane: View {
                 insetDivider
                 // Plan limits are a data source of the usage row, not a
                 // separate display — the row must exist for them to show.
+                // Nested inset: the sub-setting reads as a child of the
+                // master toggle even when both are enabled.
                 row("Fetch plan limits from Anthropic") {
                     MiniSwitch(isOn: $watcher.showPlanLimits, label: "Fetch plan limits from Anthropic")
                         .disabled(!hasOAuthLogin || !watcher.showUsageStats)
                 }
+                .padding(.leading, 12)
                 .opacity(hasOAuthLogin && watcher.showUsageStats ? 1 : 0.4)
                 caption(planLimitsCaption)
+                    .padding(.leading, 12)
             }
 
             if watcher.launchAtLoginAvailable || watcher.notificationsAvailable {
