@@ -65,6 +65,13 @@ jobs:
             --sign "$MACOS_CERT_IDENTITY" \
             "dist/Hive Light.app"
 
+      # Notarization-strictness check (Apple's resolving-common-notarization-issues):
+      # catch a malformed bundle here instead of in a rejected Apple submission.
+      - name: Verify signature
+        if: ${{ vars.NOTARIZE == 'true' }}
+        run: |
+          codesign --verify --deep --strict --verbose=2 "dist/Hive Light.app"
+
       - name: Create zip
         run: |
           ditto -c -k --keepParent "dist/Hive Light.app" dist/hive-light.zip
