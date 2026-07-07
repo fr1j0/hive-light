@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Master relabels to exactly "Show usage in panel"; sub-setting to exactly "Fetch plan limits from Anthropic"; `MiniSwitch` accessibility `label:` arguments match the visible labels.
-- Sub-setting disabled/dim condition is exactly `!hasOAuthLogin || !watcher.showUsageStats`, rendered with the existing grammar: `.disabled(...)` on the switch, `0.4` opacity on the row — no new indentation or chrome.
+- Sub-setting disabled/dim condition is exactly `!hasOAuthLogin || !watcher.showUsageStats`, rendered with the existing grammar: `.disabled(...)` on the switch, `0.4` opacity on the row. (Revised after live check: a user-approved iteration added a 12 pt leading inset nesting the sub-setting's row and caption — commit 095f836.)
 - Caption priority: no-OAuth text wins over master-off text; enabled text last. Exact strings in Task 1.
 - Defaults keys and semantics unchanged (`showUsageStats`, `showPlanLimits`); `usageRowVisible` in `PanelContent.swift` untouched; no migration.
 - Work happens on branch `feat/usage-settings-hierarchy` (already created, spec committed).

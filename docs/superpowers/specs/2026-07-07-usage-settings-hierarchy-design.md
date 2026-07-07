@@ -25,8 +25,11 @@ fallback). The settings should say exactly that:
 - **Source sub-setting:** "Fetch plan limits from Anthropic" (today's
   `showPlanLimits`, relabeled) — disabled and dimmed while the master is
   off, using the exact grammar of the existing no-OAuth disabled state
-  (`.disabled` + 0.4 opacity + explanatory caption). No new indentation or
-  chrome: the dim + caption carry the hierarchy.
+  (`.disabled` + 0.4 opacity + explanatory caption). **Revised after live
+  check:** the spec originally said "no new indentation"; the user approved
+  a follow-up iteration nesting the sub-setting's row and caption with a
+  12 pt leading inset so the parent/child relationship reads in every
+  state, not just when dimmed. The switch column stays right-aligned.
 
 Rejected alternative: making limits standalone (row appears when either
 toggle is on). "Limits override stats" is exactly why that's awkward — the
