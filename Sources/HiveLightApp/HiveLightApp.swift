@@ -46,8 +46,7 @@ struct HiveLightApp: App {
         } label: {
             Image(nsImage: TrafficLightIcon.image(
                 state: watcher.icon,
-                phase: watcher.animationPhase,
-                mono: watcher.isDarkMenuBar ? .white : .black))
+                phase: watcher.animationPhase))
                 .onAppear {
                     watcher.start()
                     DispatchQueue.main.async { offerHookInstallIfNeeded() }
