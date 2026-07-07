@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/fr1j0/hive-light/security/advisories/new
+    about: Never file security issues publicly — use private vulnerability reporting instead.

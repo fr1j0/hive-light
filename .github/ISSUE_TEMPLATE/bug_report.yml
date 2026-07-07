@@ -1,0 +1,78 @@
+name: Bug report
+description: Something Hive Light does but shouldn't, or doesn't but should.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. The more concrete the repro, the faster it gets fixed.
+        Please skim open issues first to avoid duplicates.
+
+        **Security issues:** do NOT file them here — use private reporting per
+        [SECURITY.md](https://github.com/fr1j0/hive-light/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences. What broke?
+      placeholder: "The menu-bar light stays green after a session hits a permission prompt."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro_steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps from a clean state.
+      placeholder: |
+        1. Start a Claude Code session in iTerm.
+        2. Trigger a permission prompt (e.g. an unapproved Bash command).
+        3. Watch the menu-bar icon...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: Expected vs actual
+      placeholder: |
+        Expected: the light flips to "needs you" within a second.
+        Actual: it stays green until I open the dropdown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Hive Light version (dropdown footer), install method, Claude Code version (`claude --version`), macOS version, terminal app.
+      placeholder: |
+        Hive Light: 0.22.0 (Homebrew)
+        Claude Code: 2.x.x
+        macOS: 15.5
+        Terminal: iTerm2 / Terminal / Warp / VS Code
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots / session-state files
+      description: |
+        A screenshot of the menu bar or dropdown helps a lot. If relevant, attach the
+        session's JSON from `~/.hive-light/sessions/` — redact project paths you'd
+        rather not share.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I searched existing issues and didn't find a duplicate.
+          required: true
+        - label: I'm on the latest release (or noted my version above).
+          required: true
