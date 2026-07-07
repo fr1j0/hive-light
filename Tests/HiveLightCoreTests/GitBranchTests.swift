@@ -112,6 +112,17 @@ final class GitBranchTests: XCTestCase {
         XCTAssertEqual(gitRepoRoot(forCwd: wt.path), mainRepo)
     }
 
+    func test_repoRoot_danglingWorktreeGitdir_fallsBackToCheckoutDir() throws {
+        // Renaming a repo folder leaves worktree gitdir pointers (absolute
+        // paths) dangling. Trusting the dead string would group the session
+        // under a phantom path — fall back to the checkout itself.
+        let root = try makeTree([:], dirs: ["wt"])
+        try "gitdir: \(root.appendingPathComponent("gone/.git/worktrees/wt").path)\n"
+            .write(to: root.appendingPathComponent("wt/.git"), atomically: true, encoding: .utf8)
+        XCTAssertEqual(gitRepoRoot(forCwd: root.appendingPathComponent("wt").path),
+                       root.appendingPathComponent("wt").path)
+    }
+
     func test_repoRoot_nonRepo_isNil() throws {
         let root = try makeTree([:], dirs: ["plain"])
         XCTAssertNil(gitRepoRoot(forCwd: root.appendingPathComponent("plain").path))
