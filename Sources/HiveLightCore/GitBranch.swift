@@ -39,6 +39,12 @@ public func gitRepoRoot(forCwd cwd: String) -> String? {
             // Worktree/submodule: the resolved gitdir lives under the main
             // repo's .git — its prefix names the main root.
             guard let gitDir = resolveGitdirFile(dotGit) else { return dir.path }
+            // Worktree gitdir pointers are absolute paths; renaming the
+            // parent repo folder leaves them dangling. A dead pointer must
+            // not become the grouping key — fall back to this checkout.
+            guard FileManager.default.fileExists(atPath: gitDir.standardizedFileURL.path) else {
+                return dir.path
+            }
             let path = gitDir.standardizedFileURL.path
             if let range = path.range(of: "/.git/") { return String(path[..<range.lowerBound]) }
             if path.hasSuffix("/.git") { return String(path.dropLast("/.git".count)) }
