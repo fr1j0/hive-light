@@ -13,6 +13,19 @@ struct SettingsPane: View {
     /// plan-limits toggle for API-key/Bedrock users, who have no quota.
     private let hasOAuthLogin = LimitsFetcher.oauthLoginPresent()
 
+    /// Three-state hint for the plan-limits sub-setting. The missing login
+    /// outranks the master toggle: no login means the switch can never work,
+    /// while master-off is fixable one row above.
+    private var planLimitsCaption: String {
+        if !hasOAuthLogin {
+            return "Requires a Claude subscription login in Claude Code — API-key and Bedrock/Vertex setups have no plan limits."
+        }
+        if !watcher.showUsageStats {
+            return "Plan limits appear in the usage row — turn on Show usage in panel first."
+        }
+        return "Reads your Claude Code login from the Keychain to fetch limits from Anthropic. Nothing else is sent."
+    }
+
     @State private var hookHover = false
 
     // Layout invariants: outer padding is 12 to match PanelContent, so the
@@ -42,19 +55,19 @@ struct SettingsPane: View {
 
             sectionTitle("Usage")
             card {
-                row("Show usage stats") {
-                    MiniSwitch(isOn: $watcher.showUsageStats, label: "Show usage stats")
+                row("Show usage in panel") {
+                    MiniSwitch(isOn: $watcher.showUsageStats, label: "Show usage in panel")
                 }
                 caption("Usage row in the panel · click it for details")
                 insetDivider
-                row("Show plan limits") {
-                    MiniSwitch(isOn: $watcher.showPlanLimits, label: "Show plan limits")
-                        .disabled(!hasOAuthLogin)
+                // Plan limits are a data source of the usage row, not a
+                // separate display — the row must exist for them to show.
+                row("Fetch plan limits from Anthropic") {
+                    MiniSwitch(isOn: $watcher.showPlanLimits, label: "Fetch plan limits from Anthropic")
+                        .disabled(!hasOAuthLogin || !watcher.showUsageStats)
                 }
-                .opacity(hasOAuthLogin ? 1 : 0.4)
-                caption(hasOAuthLogin
-                        ? "Reads your Claude Code login from the Keychain to fetch limits from Anthropic. Nothing else is sent."
-                        : "Requires a Claude subscription login in Claude Code — API-key and Bedrock/Vertex setups have no plan limits.")
+                .opacity(hasOAuthLogin && watcher.showUsageStats ? 1 : 0.4)
+                caption(planLimitsCaption)
             }
 
             if watcher.launchAtLoginAvailable || watcher.notificationsAvailable {
