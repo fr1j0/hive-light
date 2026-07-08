@@ -7,6 +7,11 @@ name: Notary status check
 
 on:
   workflow_dispatch:
+    inputs:
+      submission_id:
+        description: "Fetch the notarytool log for this submission id instead of probing"
+        required: false
+        default: ""
 
 jobs:
   probe:
@@ -19,6 +24,10 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
           set -uo pipefail
+          if [ -n "${{ inputs.submission_id }}" ]; then
+            xcrun notarytool log "${{ inputs.submission_id }}"               --apple-id "$APPLE_ID"               --team-id "$APPLE_TEAM_ID"               --password "$APPLE_APP_PASSWORD"
+            exit 0
+          fi
           echo "hive" > hello.txt
           zip -q probe.zip hello.txt
           out=$(xcrun notarytool submit probe.zip \
