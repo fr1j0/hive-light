@@ -83,11 +83,17 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          xcrun notarytool submit dist/hive-light.zip \
+          out=$(xcrun notarytool submit dist/hive-light.zip \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
-            --wait
+            --wait 2>&1)
+          echo "$out"
+          # notarytool exits 0 even on rejection; fail HERE, not at staple.
+          echo "$out" | grep -q "status: Accepted" || {
+            echo "::error::Notarization was not Accepted — fetch the log with notary-check.yml and the submission id above."
+            exit 1
+          }
 
       - name: Staple notarization ticket
         if: ${{ vars.NOTARIZE == 'true' }}
