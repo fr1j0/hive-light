@@ -23,6 +23,7 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           OWNER: ${{ github.repository_owner }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         shell: bash
         run: |
           set -euo pipefail
@@ -46,6 +47,25 @@ jobs:
               gh pr comment "$PR" --repo "$REPO" --body "$full" >/dev/null
             fi
           }
+
+          # ------------------------------------------------------------------
+          # Owner bypass: the repo owner's own PRs skip the protocol entirely.
+          # External contributors still go through triage + ready-for-dev.
+          # ------------------------------------------------------------------
+          if [ "$AUTHOR" = "$OWNER" ]; then
+            post_or_update_sticky "Gate skipped — PR authored by the repo owner (@${OWNER})."
+            exit 0
+          fi
+
+          # ------------------------------------------------------------------
+          # Dependabot bypass: dependabot.yml labels its PRs skip-issue-check,
+          # but the LABELED_EVENT actor is dependabot[bot], which the owner-only
+          # skip check would ignore — so exempt the bot author directly.
+          # ------------------------------------------------------------------
+          if [ "$AUTHOR" = "dependabot[bot]" ]; then
+            post_or_update_sticky "Gate skipped — automated dependency update by @dependabot."
+            exit 0
+          fi
 
           # ------------------------------------------------------------------
           # Single fetch: PR labels + PR label-events, and for each linked
