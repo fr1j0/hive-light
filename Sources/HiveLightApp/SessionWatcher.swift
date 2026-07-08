@@ -15,7 +15,6 @@ final class SessionWatcher: ObservableObject {
     @Published private(set) var icon: IconState = IconState(red: .off, orange: .off, green: .off)
     @Published private(set) var summary: String? = nil
     @Published private(set) var animationPhase: Double = 0
-    @Published private(set) var isDarkMenuBar: Bool = true
     @Published private(set) var subagentsBySession: [String: SubagentList] = [:]
     /// Opt-in: show a running session's parallel subagents as indented rows.
     @Published var showSubagents: Bool {
@@ -96,8 +95,6 @@ final class SessionWatcher: ObservableObject {
             self?.sessions.first { $0.sessionID == id }
         }
         if notifyOnNeedsYou { notifier.requestAuthorization() }
-        updateAppearance()
-        observeAppearance()
         try? FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
         store.prune(now: Date())
         reload()
@@ -240,23 +237,6 @@ final class SessionWatcher: ObservableObject {
             clockTimer?.invalidate()
             clockTimer = nil
             animationPhase = 0
-        }
-    }
-
-    // MARK: - Menu-bar appearance (for the adaptive mono color)
-
-    private func updateAppearance() {
-        let match = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua])
-        isDarkMenuBar = (match == .darkAqua)
-    }
-
-    private func observeAppearance() {
-        DistributedNotificationCenter.default().addObserver(
-            forName: Notification.Name("AppleInterfaceThemeChangedNotification"),
-            object: nil, queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in self.updateAppearance() }
         }
     }
 
