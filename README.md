@@ -44,10 +44,10 @@ The menu-bar icon reflects the most urgent state across all your sessions:
 
 | Lamp | Meaning | Motion |
 |------|---------|--------|
-| <img src="assets/lamp-red.svg" width="22" alt=""> Top — red | A session needs you: a question, permission prompt, or review request is waiting | Blinks (question) · steady (permission, review) |
-| <img src="assets/lamp-orange.svg" width="22" alt=""> Middle — orange | At least one session is actively working | Gentle pulse |
-| <img src="assets/lamp-green.svg" width="22" alt=""> Bottom — green | Sessions are idle; nothing needs you | Steady |
-| <img src="assets/lamp-dim.svg" width="22" alt=""> All hollow | No live sessions | Steady |
+| <img src="assets/lamp-red.svg" width="16" alt=""> Red | A session needs you: a question, permission prompt, or review request is waiting | Blinks (question) · steady (permission, review) |
+| <img src="assets/lamp-orange.svg" width="16" alt=""> Orange | At least one session is actively working | Gentle pulse |
+| <img src="assets/lamp-green.svg" width="16" alt=""> Green | Sessions are idle; nothing needs you | Steady |
+| <img src="assets/lamp-dim.svg" width="16" alt=""> Hollow | No live sessions | Steady |
 
 Red always wins the aggregate, so a single waiting session is never buried behind busy ones. Motion is reserved for the menu bar — a blink to pull your eye when a session needs a reply, a soft pulse while work is underway — and state is conveyed by lamp position as well as color.
 
