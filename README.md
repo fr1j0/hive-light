@@ -55,26 +55,35 @@ Red always wins the aggregate, so a single waiting session is never buried behin
 
 Click the icon for the full picture:
 
-- A one-line summary header, such as `1 needs you · 2 working`.
-- One card per session, sorted by urgency: status dot, project name, a live
-  elapsed-state timer, and — when a session is blocked — the actual question
-  or permission request it's waiting on.
+- A hive-voiced header — *Hive is humming* over the factual counts
+  (`2 working · 1 idle`) — whose lamp halo breathes while work is underway.
+- Sessions grouped by project, in a stable order — a status change recolors a
+  row, never moves it. Each card: status dot, Git branch label, context gauge,
+  model badge, a live elapsed-state timer, and — when a session is blocked —
+  the actual question or permission request it's waiting on.
 - Running sessions with parallel subagents show them as collapsible rows
   inside the card.
 - Click a card to jump to that session's terminal.
-- Settings flip in place: show subagents, launch at login, needs-you
-  notifications, and one-click install or removal of the Claude Code hooks.
+- An opt-in usage strip — 5-hour and weekly windows — that opens a full
+  usage view with plan limits and per-model daily history.
+- Settings flip in place: show subagents, usage stats and plan limits, launch
+  at login, needs-you notifications, and one-click install or removal of the
+  Claude Code hooks.
 - Quit and the running version live in the footer.
 
 ## Features
 
 - Native menu-bar app — lightweight, no dock icon, no window.
 - Aggregate traffic light across any number of concurrent sessions.
-- A distinct, chunky traffic-light icon that adapts to light and dark menu bars.
+- A distinct traffic-light icon — glowing lamps on a dark plate, hollow sockets
+  when unlit — one rendering for both menu-bar themes.
+- Per-session context gauge, model badge, and Git branch label.
 - Live updates via filesystem events — the display reacts within a fraction of a second.
-- Opt-in native notification when a session flips to needs-you — click it to jump to that terminal.
+- Opt-in native notification when a session flips to needs-you — with the actual
+  question — click it to jump to that terminal.
+- Opt-in usage stats, with plan limits fetched via your Claude Code login.
 - Launch-at-login toggle, so the light is always on duty.
-- No polling, no network, no telemetry.
+- No polling, no telemetry — and no network beyond the opt-in plan-limits fetch.
 - Zero configuration beyond a one-click hook install.
 
 ## How It Works
@@ -130,7 +139,7 @@ Hive Light edits your settings and runs on every Claude Code hook, so it is full
 
 Install only from the official [Releases](https://github.com/fr1j0/hive-light/releases), and verify the published SHA-256 checksum before running.
 
-Everything stays on your machine — no network, no telemetry; see [PRIVACY.md](PRIVACY.md) for exactly what the app touches. To report a vulnerability privately, see [SECURITY.md](SECURITY.md). Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Everything stays on your machine — no telemetry, and no network beyond the opt-in plan-limits fetch; see [PRIVACY.md](PRIVACY.md) for exactly what the app touches. To report a vulnerability privately, see [SECURITY.md](SECURITY.md). Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License & Trademark
 
