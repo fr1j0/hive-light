@@ -112,6 +112,8 @@ Download the latest `.app` from [GitHub Releases](https://github.com/fr1j0/hive-
 3. Your next Claude Code prompt lights up the menu.
 4. **Remove Claude Code hooks** cleanly undoes the change at any time.
 
+Questions or a light that won't turn on? See the [FAQ](docs/FAQ.md) and [Troubleshooting](docs/TROUBLESHOOTING.md).
+
 ## Build from Source
 
 Requires Swift 5.9+ and macOS 13+.
