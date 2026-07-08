@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import HiveLightCore
 
 /// The panel's lamp colors — same sRGB values the menu icons used.
@@ -6,8 +7,15 @@ enum PanelPalette {
     static let red = Color(red: 1.00, green: 0.23, blue: 0.19)
     static let orange = Color(red: 1.00, green: 0.58, blue: 0.00)
     static let green = Color(red: 0.20, green: 0.78, blue: 0.35)
-    // 70% opacity: a quiet ref label, not a status highlight.
-    static let branchAmber = Color(red: 1.00, green: 0.76, blue: 0.40).opacity(0.7)
+    // A quiet ref label, not a status highlight. Amber stays the git-ref
+    // color in both themes, but the value adapts: the pale 70% amber that
+    // glows on dark material is unreadable on light (#147), so light mode
+    // gets a deep amber (~5:1 on the panel material).
+    static let branchAmber = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 1.00, green: 0.76, blue: 0.40, alpha: 0.70)
+            : NSColor(srgbRed: 0.55, green: 0.36, blue: 0.02, alpha: 0.92)
+    })
 
     static func color(for status: SessionStatus) -> Color {
         switch status {
