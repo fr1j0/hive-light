@@ -84,14 +84,33 @@ struct PanelContent: View {
     @ViewBuilder
     private func sessionList(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let summary = watcher.summary {
-                HStack(spacing: 8) {
-                    Circle().fill(headerColor).frame(width: 8, height: 8)
-                    Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
+            let voice = headerVoice(for: statusCounts(for: watcher.sessions))
+            HStack(spacing: 10) {
+                if watcher.sessions.isEmpty {
+                    // Asleep: hollow ring, no halo — same grammar as the
+                    // menu-bar icon's punched placeholder.
+                    Circle().strokeBorder(Color.secondary.opacity(0.6), lineWidth: 1.6)
+                        .frame(width: 11, height: 11)
+                } else {
+                    // The halo buzzes on the icon's breathe curve while the
+                    // hive is humming — same clock, same rhythm as the
+                    // menu-bar lamp; steady for every other state.
+                    let buzzing = watcher.icon.orange == .breathe && watcher.icon.red == .off
+                    let breath = buzzing ? litAlpha(for: .breathe, phase: watcher.animationPhase) : 1.0
+                    Circle().fill(headerColor)
+                        .frame(width: 11, height: 11)
+                        .shadow(color: headerColor.opacity(0.9 * breath),
+                                radius: 2 + 3 * breath)
+                        .shadow(color: headerColor.opacity(0.5 * breath),
+                                radius: 5 + 6 * breath)
                 }
-                .padding(.horizontal, 10)
-                Divider()
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(voice.title).font(.system(size: 13, weight: .semibold))
+                    Text(voice.subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
             }
+            .padding(.horizontal, 10)
+            Divider()
 
             if estimatedRowWeight > Self.scrollThreshold {
                 ScrollView {
@@ -121,11 +140,8 @@ struct PanelContent: View {
     private func sessionRows(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             if watcher.sessions.isEmpty {
-                Text("No active Claude Code sessions")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                // The asleep header carries the empty-state message.
+                EmptyView()
             } else if watcher.sessionOrder == .project {
                 // Original variant B (live verdict): EVERY block gets the
                 // tiny repo header and branch-led cards — one card grammar

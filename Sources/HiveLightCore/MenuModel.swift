@@ -43,6 +43,36 @@ public func summaryText(for counts: StatusCounts) -> String? {
     return parts.joined(separator: " · ")
 }
 
+/// The dropdown header's hive-voiced state line: whimsy in the title, facts
+/// in the subtitle. One fixed phrase per aggregate state (voice set "Keeper",
+/// chosen from live mockups 2026-07-08), never rotated. Precedence mirrors
+/// the menu-bar icon: needs-you > working > idle > empty.
+public struct HeaderVoice: Sendable, Equatable {
+    public let title: String
+    public let subtitle: String
+    public init(title: String, subtitle: String) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+}
+
+public func headerVoice(for counts: StatusCounts) -> HeaderVoice {
+    if counts.error > 0 || counts.needYou > 0 {
+        return HeaderVoice(title: "The hive needs its keeper",
+                           subtitle: summaryText(for: counts) ?? "")
+    }
+    if counts.working > 0 {
+        var parts = ["\(counts.working) working"]
+        if counts.idle > 0 { parts.append("\(counts.idle) idle") }
+        return HeaderVoice(title: "Hive is humming", subtitle: parts.joined(separator: " · "))
+    }
+    if counts.idle > 0 {
+        return HeaderVoice(title: "Hive is calm",
+                           subtitle: counts.idle == 1 ? "1 session idle" : "\(counts.idle) sessions idle")
+    }
+    return HeaderVoice(title: "Hive is asleep", subtitle: "No live sessions")
+}
+
 /// Display order for the dropdown: chronological, oldest first — the order
 /// the sessions' terminal tabs were opened. Status carries NO positional
 /// weight: since click-to-focus, the list is a navigation index, and indexes
