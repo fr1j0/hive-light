@@ -1,0 +1,35 @@
+name: Label new issues
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bootstrap labels (idempotent)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          create_label() {
+            local name="$1" color="$2" desc="$3"
+            gh label create "$name" --repo "$REPO" --color "$color" --description "$desc" 2>/dev/null || true
+          }
+          create_label "needs-triage"     "fbca04" "New issue, awaiting maintainer review"
+          create_label "needs-info"       "d4a017" "Maintainer asked for more info; waiting on reporter"
+          create_label "ready-for-dev"    "0e8a16" "Triaged and approved; safe to start coding"
+          create_label "skip-issue-check" "cccccc" "PR exempt from the issue-gate (typo/CI/docs-only)"
+
+      - name: Apply needs-triage to opened issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label needs-triage
