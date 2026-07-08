@@ -1,0 +1,38 @@
+# Manual probe for the Apple notarization gate (case 102930081454).
+# Submits a dummy zip: statusCode 7000 => team still not configured;
+# an accepted submission (even one that ends "Invalid" — the dummy is
+# unsigned) => Apple has enabled notarization and the release train can
+# flip NOTARIZE=true.
+name: Notary status check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: macos-14
+    steps:
+      - name: Submit dummy zip to notary service
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          set -uo pipefail
+          echo "hive" > hello.txt
+          zip -q probe.zip hello.txt
+          out=$(xcrun notarytool submit probe.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait 2>&1) || true
+          echo "$out"
+          if echo "$out" | grep -q "7000"; then
+            echo "::notice::Team is STILL NOT configured for notarization (statusCode 7000)."
+            exit 0
+          fi
+          if echo "$out" | grep -qE "status: (Invalid|Accepted|In Progress)"; then
+            echo "::notice::NOTARIZATION IS ENABLED — the submission was accepted for analysis. Flip NOTARIZE=true and run the unlock sequence."
+            exit 0
+          fi
+          echo "::warning::Unrecognized notarytool response — read the log above."
