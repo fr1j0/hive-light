@@ -6,15 +6,28 @@ welcome — here's how to make yours land smoothly.
 
 ## Before you code
 
-- **Bug fixes and small improvements:** open a PR directly, or file a
-  [bug report](https://github.com/fr1j0/hive-light/issues/new?template=bug_report.yml)
-  first if you want a sanity check.
-- **New features:** open a
-  [feature request](https://github.com/fr1j0/hive-light/issues/new?template=feature_request.yml)
-  first and wait for a maintainer thumbs-up. The
-  project says no to a lot of reasonable ideas to stay small — for example, routine
-  state transitions get passive UI, never notifications. An approved issue saves you
-  from building something that won't be merged.
+Every change starts as an issue — that's enforced, not just encouraged (see
+*The issue gate* below).
+
+1. **File it:** a
+   [bug report](https://github.com/fr1j0/hive-light/issues/new?template=bug_report.yml)
+   or a
+   [feature request](https://github.com/fr1j0/hive-light/issues/new?template=feature_request.yml).
+   New issues are automatically labeled `needs-triage`.
+2. **Wait for triage:** a maintainer will either ask for more info (`needs-info`)
+   or approve it (`ready-for-dev`). The project says no to a lot of reasonable
+   ideas to stay small — for example, routine state transitions get passive UI,
+   never notifications. An approved issue saves you from building something that
+   won't be merged.
+3. **Code once it's `ready-for-dev`.**
+
+### The issue gate
+
+CI checks every PR for a linked issue (`Closes #<N>` in the PR body) carrying the
+`ready-for-dev` label **applied by the repo owner** — a label applied by anyone
+else doesn't count. PRs without an approved linked issue fail the gate and can't
+merge. Maintainers can apply `skip-issue-check` to a PR for typo-only, CI-only, or
+docs-only changes.
 
 ## The flow
 
@@ -30,8 +43,9 @@ welcome — here's how to make yours land smoothly.
    swift test
    ```
 
-4. Open a PR against `main` with a short description of what changed and why.
-   CI must pass before merge.
+4. Open a PR against `main` with a short description of what changed and why,
+   and `Closes #<N>` linking your approved issue. CI and the issue gate must
+   pass before merge.
 
 ## What makes a PR easy to merge
 

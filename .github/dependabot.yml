@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Bump pinned GitHub Actions (e.g. actions/checkout@v4) once a week.
+  # Grouped so a normal week produces a single PR instead of one-per-action.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    # skip-issue-check is honored by .github/workflows/issue-gate.yml so
+    # auto-opened dependency PRs aren't blocked by the linked-issue gate.
+    labels:
+      - skip-issue-check

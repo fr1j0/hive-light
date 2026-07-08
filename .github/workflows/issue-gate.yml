@@ -1,0 +1,190 @@
+# This workflow uses `pull_request_target` so it runs with the target repo's
+# write token even when the PR comes from a fork (required to post the sticky
+# comment). It does NOT check out PR head code; it only reads metadata via the
+# GitHub API. That keeps the security surface small — see issue-gate spec §Risks.
+name: Issue gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, edited, reopened, labeled, unlabeled]
+
+permissions:
+  pull-requests: write
+  issues: read
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          OWNER: ${{ github.repository_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MARKER='<!-- hive-light-issue-gate -->'
+          NAME="${REPO#*/}"
+
+          # ------------------------------------------------------------------
+          # post_or_update_sticky: write the marker comment, or edit it in place
+          # ------------------------------------------------------------------
+          post_or_update_sticky() {
+            local body="$1"
+            local full="${MARKER}"$'\n'"${body}"
+            local existing
+            existing=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+              --jq ".[] | select(.user.login==\"github-actions[bot]\") | select(.body | startswith(\"${MARKER}\")) | .id" \
+              | head -n1 || true)
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" -f body="$full" >/dev/null
+            else
+              gh pr comment "$PR" --repo "$REPO" --body "$full" >/dev/null
+            fi
+          }
+
+          # ------------------------------------------------------------------
+          # Single fetch: PR labels + PR label-events, and for each linked
+          # closing issue its labels + label-events. A LABELED_EVENT carries the
+          # actor who applied each label, so the gate can require the OWNER's
+          # approval (issue #92) instead of mere presence.
+          #
+          # timelineItems is capped at 100 LABELED_EVENTs per entity — far above
+          # any real issue in this repo; latest-wins still holds for the page.
+          # ------------------------------------------------------------------
+          response=$(gh api graphql -f query='
+            query($owner: String!, $name: String!, $number: Int!) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $number) {
+                  labels(first: 30) { nodes { name } }
+                  timelineItems(first: 100, itemTypes: [LABELED_EVENT]) {
+                    pageInfo { hasNextPage }
+                    nodes { ... on LabeledEvent { label { name } actor { login } createdAt } }
+                  }
+                  closingIssuesReferences(first: 20) {
+                    nodes {
+                      number
+                      labels(first: 30) { nodes { name } }
+                      timelineItems(first: 100, itemTypes: [LABELED_EVENT]) {
+                        pageInfo { hasNextPage }
+                        nodes { ... on LabeledEvent { label { name } actor { login } createdAt } }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -F owner="$OWNER" -F name="$NAME" -F number="$PR")
+
+          # Loud-fail the silent truncation cliff: if any timeline exceeded the
+          # 100-event page, the latest-actor check may be reading a stale page.
+          if jq -e '
+            [ .data.repository.pullRequest.timelineItems.pageInfo.hasNextPage ]
+            + [ .data.repository.pullRequest.closingIssuesReferences.nodes[].timelineItems.pageInfo.hasNextPage ]
+            | any
+          ' <<<"$response" >/dev/null; then
+            echo "::warning::A PR or linked-issue timeline exceeds 100 LABELED_EVENTs; the owner-applied label check reads only the latest page and may be inaccurate."
+          fi
+
+          # pr_has_label <name>: true if the PR currently carries <name>.
+          pr_has_label() {
+            jq -e --arg L "$1" \
+              '.data.repository.pullRequest.labels.nodes | any(.name==$L)' \
+              <<<"$response" >/dev/null
+          }
+
+          # pr_label_actor <name>: login of the latest LABELED_EVENT actor for
+          # <name> on the PR itself (empty if no such event).
+          pr_label_actor() {
+            jq -r --arg L "$1" '
+              .data.repository.pullRequest.timelineItems.nodes
+              | map(select(.label.name==$L))
+              | sort_by(.createdAt) | last | .actor.login // ""
+            ' <<<"$response"
+          }
+
+          # ------------------------------------------------------------------
+          # Override: PR carries skip-issue-check — but only the OWNER's
+          # application counts. A non-owner skip label is IGNORED (fall through
+          # to the linked-issue check) with a note, never a hard block.
+          # ------------------------------------------------------------------
+          SKIP_NOTE=""
+          if pr_has_label "skip-issue-check"; then
+            skip_actor=$(pr_label_actor "skip-issue-check")
+            if [ "$skip_actor" = "$OWNER" ]; then
+              post_or_update_sticky "$(printf 'Gate skipped — `skip-issue-check` applied by the repo owner (@%s).' "$OWNER")"
+              exit 0
+            fi
+            SKIP_NOTE="Note: \`skip-issue-check\` was ignored — it was not applied by the repo owner (@${OWNER})."$'\n\n'
+          fi
+
+          # ------------------------------------------------------------------
+          # Linked closing issues: number, presence of ready-for-dev, and the
+          # actor who most recently applied it. Tab-separated: "<num>\t<y|n>\t<actor>".
+          # ------------------------------------------------------------------
+          linked=$(jq -r '
+            .data.repository.pullRequest.closingIssuesReferences.nodes[]
+            | . as $n
+            | ($n.labels.nodes | any(.name=="ready-for-dev")) as $present
+            | ($n.timelineItems.nodes
+                | map(select(.label.name=="ready-for-dev"))
+                | sort_by(.createdAt) | last | .actor.login // "") as $actor
+            | "\($n.number)\t\(if $present then "y" else "n" end)\t\($actor)"
+          ' <<<"$response" || true)
+
+          # ------------------------------------------------------------------
+          # No linked issues at all -> fail
+          # ------------------------------------------------------------------
+          if [ -z "$linked" ]; then
+            msg=$(cat <<'MSG' | sed 's/^          //'
+          Gate failed — no linked issue found.
+
+          Add `Closes #<N>` (or `Fixes #<N>` / `Resolves #<N>`) to the PR body, or link an
+          issue manually in the right-hand sidebar. The linked issue must carry the
+          `ready-for-dev` label, applied by the repo owner.
+
+          See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for the full flow.
+          MSG
+            )
+            post_or_update_sticky "${SKIP_NOTE}${msg}"
+            exit 1
+          fi
+
+          # ------------------------------------------------------------------
+          # Partition linked issues. Approved = ready-for-dev present AND the
+          # latest applier is the owner. Anything else is unapproved.
+          # ------------------------------------------------------------------
+          approved=()
+          unapproved=()
+          while IFS=$'\t' read -r num present actor; do
+            [ -z "$num" ] && continue
+            if [ "$present" = "y" ] && [ "$actor" = "$OWNER" ]; then
+              approved+=("$num")
+            else
+              unapproved+=("$num")
+            fi
+          done <<<"$linked"
+
+          if [ "${#approved[@]}" -gt 0 ]; then
+            list=$(IFS=,; echo "${approved[*]}" | sed 's/,/, #/g')
+            post_or_update_sticky "${SKIP_NOTE}Gate passed — linked to owner-approved issue(s) #${list}."
+            exit 0
+          fi
+
+          # ------------------------------------------------------------------
+          # Linked issues exist but none are owner-approved -> fail
+          # ------------------------------------------------------------------
+          list=$(IFS=,; echo "${unapproved[*]}" | sed 's/,/, #/g')
+          msg=$(cat <<MSG | sed 's/^          //'
+          Gate failed — linked issue(s) #${list} are not approved by the repo owner.
+
+          The \`ready-for-dev\` label must be applied by @${OWNER} (the repo owner). A label
+          that is absent, or applied by anyone else, does not count — a maintainer needs to
+          triage and apply it. See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md).
+          MSG
+          )
+          post_or_update_sticky "${SKIP_NOTE}${msg}"
+          exit 1
