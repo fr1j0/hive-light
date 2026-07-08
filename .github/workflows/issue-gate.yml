@@ -58,6 +58,16 @@ jobs:
           fi
 
           # ------------------------------------------------------------------
+          # Dependabot bypass: dependabot.yml labels its PRs skip-issue-check,
+          # but the LABELED_EVENT actor is dependabot[bot], which the owner-only
+          # skip check would ignore — so exempt the bot author directly.
+          # ------------------------------------------------------------------
+          if [ "$AUTHOR" = "dependabot[bot]" ]; then
+            post_or_update_sticky "Gate skipped — automated dependency update by @dependabot."
+            exit 0
+          fi
+
+          # ------------------------------------------------------------------
           # Single fetch: PR labels + PR label-events, and for each linked
           # closing issue its labels + label-events. A LABELED_EVENT carries the
           # actor who applied each label, so the gate can require the OWNER's
