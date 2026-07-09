@@ -22,7 +22,7 @@ final class ApplyHookTests: XCTestCase {
 
     func test_ignoreAction_writesNothing() throws {
         let store = tempStore()
-        let p = HookPayload(sessionID: "s1", hookEventName: "PostToolUse", cwd: "/x", message: nil)
+        let p = HookPayload(sessionID: "s1", hookEventName: "SubagentStop", cwd: "/x", message: nil)
         try applyHook(p, to: store, now: now)
         XCTAssertEqual(try store.loadAll().count, 0)
     }
@@ -123,6 +123,19 @@ final class ApplyHookTests: XCTestCase {
         try applyHook(p, to: store, now: now)
         XCTAssertEqual(try store.loadAll().first?.detail,
                        "Claude needs your permission to use Bash")
+    }
+
+    func test_postToolUse_clearsStalePermissionRed() throws {
+        // The #170 scenario: approval emits no hook event, so the waiting red
+        // holds until the approved tool finishes — PostToolUse clears it.
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "Notification", cwd: "/x/p",
+                                  message: "Claude needs your permission to use Bash"), to: store, now: now)
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "PostToolUse", cwd: "/x/p",
+                                  message: nil), to: store, now: now.addingTimeInterval(1))
+        let s = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(s.status, .running)
+        XCTAssertNil(s.detail)
     }
 
     func test_runningWrite_clearsStaleDetail() throws {

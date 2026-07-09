@@ -24,8 +24,11 @@ final class HookInstallerTests: XCTestCase {
 
     // MARK: – Basic install
 
-    func test_install_addsAllSixEvents() {
+    func test_install_addsAllSevenEvents() {
         let out = installedHooks(into: [:], command: cmd)
+        XCTAssertEqual(Set(hiveLightHookEvents),
+                       ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse",
+                        "Stop", "SessionEnd", "Notification"])
         for event in hiveLightHookEvents {
             XCTAssertTrue(commands(out, event).contains(cmd), "missing \(event)")
         }
@@ -47,6 +50,14 @@ final class HookInstallerTests: XCTestCase {
         let out = installedHooks(into: [:], command: cmd)
         let hooks = try XCTUnwrap(out["hooks"] as? [String: Any])
         let groups = try XCTUnwrap(hooks["PreToolUse"] as? [[String: Any]])
+        let ours = groups.first { ($0["hooks"] as? [[String: Any]])?.contains { $0["command"] as? String == cmd } == true }
+        XCTAssertEqual(ours?["matcher"] as? String, "*")
+    }
+
+    func test_postToolUse_groupHasMatcher() throws {
+        let out = installedHooks(into: [:], command: cmd)
+        let hooks = try XCTUnwrap(out["hooks"] as? [String: Any])
+        let groups = try XCTUnwrap(hooks["PostToolUse"] as? [[String: Any]])
         let ours = groups.first { ($0["hooks"] as? [[String: Any]])?.contains { $0["command"] as? String == cmd } == true }
         XCTAssertEqual(ours?["matcher"] as? String, "*")
     }

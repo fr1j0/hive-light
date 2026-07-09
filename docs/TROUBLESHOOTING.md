@@ -33,6 +33,19 @@ at the old `Claude Light.app` are rewritten. If a session still doesn't register
 The rename also changed the app's bundle identifier, which resets two macOS-managed
 permissions — re-enable **launch at login** and **notifications** if you used them.
 
+### The red "needs your permission" light lingers after I approve
+
+Claude Code emits no hook event at the moment you approve a permission prompt, so
+the light stays red until the next event — since v0.27.0 that's the approved tool
+finishing (`PostToolUse`). Two things to check:
+
+1. If you upgraded from v0.26.0 or earlier, the hook registration changed: click
+   the icon → **Remove Claude Code hooks**, then **Install Claude Code hooks**, and
+   start a fresh Claude Code session.
+2. A long-running approved tool keeps the light red for its whole runtime — that's
+   the earliest signal Claude Code's hooks provide. It clears the moment the tool
+   finishes.
+
 ### Notifications don't appear
 
 1. Notifications are opt-in: enable the needs-you notification toggle in the
