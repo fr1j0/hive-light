@@ -4,6 +4,23 @@ import Foundation
 /// Shared by the in-memory filter (`liveSessions`) and on-disk `SessionStore.prune`.
 public let defaultSessionTTL: TimeInterval = 8 * 3600
 
+/// Sessions that have only ever seen SessionStart expire fast (#167): ghosts
+/// from closed tabs and aborted launches vanish in minutes, while a real but
+/// unused REPL simply reappears on its first prompt.
+public let unpromptedSessionTTL: TimeInterval = 15 * 60
+
+/// The TTL a given session deserves. Unprompted = idle and never updated
+/// since birth (SessionStart stamps started_at == updated_at; any later hook
+/// event moves updated_at). A nil started_at (files from older hooks) keeps
+/// the generous default — never reap legacy files aggressively.
+public func sessionTTL(for session: Session) -> TimeInterval {
+    if session.status == .idle,
+       let started = session.startedAt, started == session.updatedAt {
+        return unpromptedSessionTTL
+    }
+    return defaultSessionTTL
+}
+
 /// One-time rename migration (#133): moves the legacy ~/.claude-light state
 /// dir to its ~/.hive-light home. Only fires when the legacy dir exists and
 /// the new one doesn't — never merges, never overwrites live state. Cheap
@@ -61,9 +78,11 @@ public struct SessionStore {
         return try? HiveLightJSON.decoder.decode(Session.self, from: data)
     }
 
-    /// Deletes session files past the TTL — decodable ones by their `updatedAt`,
-    /// corrupt ones by file mtime — so abnormally-terminated sessions don't
-    /// accumulate on disk forever. Fail-safe: errors skip the file.
+    /// Deletes session files past their TTL — decodable ones by `updatedAt`
+    /// against their per-session TTL (unprompted sessions expire fast, #167),
+    /// corrupt ones by file mtime against the default — so abnormally-
+    /// terminated sessions don't accumulate on disk forever. Fail-safe:
+    /// errors skip the file.
     public func prune(now: Date, ttl: TimeInterval = defaultSessionTTL) {
         let fm = FileManager.default
         guard let urls = try? fm.contentsOfDirectory(
@@ -71,14 +90,17 @@ public struct SessionStore {
         ) else { return }
         for url in urls where url.pathExtension == "json" {
             let lastActivity: Date?
+            let effectiveTTL: TimeInterval
             if let data = try? Data(contentsOf: url),
                let session = try? HiveLightJSON.decoder.decode(Session.self, from: data) {
                 lastActivity = session.updatedAt
+                effectiveTTL = Swift.min(ttl, sessionTTL(for: session))
             } else {
                 lastActivity = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
                     .contentModificationDate
+                effectiveTTL = ttl
             }
-            if let last = lastActivity, now.timeIntervalSince(last) > ttl {
+            if let last = lastActivity, now.timeIntervalSince(last) > effectiveTTL {
                 try? fm.removeItem(at: url)
             }
         }

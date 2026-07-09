@@ -52,8 +52,10 @@ permissions — re-enable **launch at login** and **notifications** if you used 
 ### A finished or crashed session lingers in the panel
 
 Sessions expire automatically (hours-long TTL, so a laptop sleep doesn't kill your
-list). If something is truly stuck, quit Hive Light, delete the stale file from
-`~/.hive-light/sessions/`, and relaunch.
+list). Sessions that were started but never prompted — the ghosts left by closing
+a tab or an aborted launch, recognizable by `started_at == updated_at` in their
+state file — self-clean within ~15 minutes. If something is truly stuck, quit
+Hive Light, delete the stale file from `~/.hive-light/sessions/`, and relaunch.
 
 ### Usage stats don't show
 

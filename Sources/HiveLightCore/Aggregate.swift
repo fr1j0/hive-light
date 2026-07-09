@@ -11,7 +11,9 @@ public enum AggregateLight: String, Sendable {
 /// session left open and idle for hours doesn't vanish — while still clearing
 /// ghosts left by an abnormally-terminated session. Default: `defaultSessionTTL`.
 public func liveSessions(_ sessions: [Session], now: Date, ttl: TimeInterval = defaultSessionTTL) -> [Session] {
-    sessions.filter { now.timeIntervalSince($0.updatedAt) <= ttl }
+    // Each session's own TTL applies (unprompted ones expire fast, #167);
+    // an explicit ttl argument stays the cap for everything.
+    sessions.filter { now.timeIntervalSince($0.updatedAt) <= Swift.min(ttl, sessionTTL(for: $0)) }
 }
 
 public func aggregateLight(for sessions: [Session]) -> AggregateLight {
