@@ -43,8 +43,14 @@ final class HookActionTests: XCTestCase {
         XCTAssertEqual(action(for: payload("SessionEnd")), .delete)
     }
 
+    func test_postToolUse_isRunning() {
+        // An approval is invisible to hooks; PostToolUse is the first event
+        // after the approved tool finishes, so it clears a stale waiting red (#170).
+        XCTAssertEqual(action(for: payload("PostToolUse")), .set(.running, detail: nil))
+    }
+
     func test_unknownEvent_isIgnored() {
-        XCTAssertEqual(action(for: payload("PostToolUse")), .ignore)
+        XCTAssertEqual(action(for: payload("SubagentStop")), .ignore)
     }
 
     func test_stop_approvalProseTranscript_isHandoff() {
@@ -84,6 +90,11 @@ final class HookActionTests: XCTestCase {
         // PreToolUse fires per tool call; a full transcript read each time is
         // too expensive, so it stays on the last measurement.
         XCTAssertFalse(eventCarriesTranscript("PreToolUse"))
+    }
+
+    func test_postToolUse_doesNotCarryTranscript() {
+        // Same per-tool-call cadence as PreToolUse — too expensive to read.
+        XCTAssertFalse(eventCarriesTranscript("PostToolUse"))
     }
 
     func test_notification_doesNotCarryTranscript() {

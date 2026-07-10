@@ -4,6 +4,10 @@ public let hiveLightHookRegistrations: [(event: String, matcher: String?)] = [
     ("SessionStart", nil),
     ("UserPromptSubmit", nil),
     ("PreToolUse", "*"),
+    // Approval time emits no hook event; PostToolUse is the first signal after
+    // an approved tool finishes, bounding how long a stale "needs permission"
+    // red can linger (#170).
+    ("PostToolUse", "*"),
     ("Stop", nil),
     ("SessionEnd", nil),
     ("Notification", "permission_prompt"),

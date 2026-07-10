@@ -40,6 +40,10 @@ public func action(for payload: HookPayload, transcriptJSONL: String? = nil) -> 
         return .set(.idle, detail: nil)
     case "UserPromptSubmit", "PreToolUse":
         return .set(.running, detail: nil)
+    case "PostToolUse":
+        // First event after an approved tool finishes — clears a waiting red
+        // that would otherwise persist until the next PreToolUse/Stop (#170).
+        return .set(.running, detail: nil)
     case "Notification":
         // The payload message says what's blocked ("Claude needs your
         // permission to use Bash") — carry it into the banner (#80).
