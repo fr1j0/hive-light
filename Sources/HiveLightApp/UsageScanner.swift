@@ -64,7 +64,7 @@ final class UsageScanner: ObservableObject {
         for path in paths {
             guard let stamp = stamp(path: path) else { continue }
             entries += cache.value(for: path, stamp: stamp) {
-                tailText(path: path, maxBytes: maxTailBytes)
+                readTranscript(atPath: path, maxBytes: maxTailBytes)
                     .map(usageEntries(transcriptJSONL:)) ?? []
             }
         }
@@ -106,15 +106,4 @@ final class UsageScanner: ObservableObject {
         return FileStamp(mtime: mtime, size: size.uint64Value)
     }
 
-    /// Bounded tail read, lossy-decoded — a live transcript's tail can be torn
-    /// mid-UTF-8 (#111) and its first line mid-JSON; `usageEntries` skips both.
-    nonisolated static func tailText(path: String, maxBytes: Int) -> String? {
-        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? handle.close() }
-        guard let size = try? handle.seekToEnd() else { return nil }
-        let offset = size > UInt64(maxBytes) ? size - UInt64(maxBytes) : 0
-        try? handle.seek(toOffset: offset)
-        guard let data = try? handle.readToEnd() else { return nil }
-        return String(decoding: data, as: UTF8.self)
-    }
 }
