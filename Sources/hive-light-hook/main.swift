@@ -11,8 +11,9 @@ if let payload = try? HiveLightJSON.decoder.decode(HookPayload.self, from: input
     let store = SessionStore(directory: SessionStore.defaultDirectory())
     var transcriptJSONL: String? = nil
     if eventCarriesTranscript(payload.hookEventName), let path = payload.transcriptPath {
-        // Lossy read: Claude Code appends concurrently and a strict UTF-8
-        // decode fails wholesale on a torn tail, freezing chip/gauge (#111).
+        // Lossy, 64KB-tail-capped read (#106): Claude Code appends
+        // concurrently and a strict UTF-8 decode fails wholesale on a torn
+        // tail (#111); the per-line scans skip both torn edges.
         transcriptJSONL = readTranscript(atPath: path)
     }
     // The ps-walk below is the expensive part of this hook and the terminal
