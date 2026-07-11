@@ -161,7 +161,7 @@ final class SessionWatcher: ObservableObject {
         var scannedTranscripts: Set<String> = []
         for i in live.indices where live[i].status == .running {
             guard let path = live[i].transcriptPath else { continue }
-            if let tail = transcriptTail(path: path),
+            if let tail = readTranscript(atPath: path),
                let reason = apiErrorReason(transcriptJSONL: tail) {
                 live[i].status = .error
                 reasons[live[i].sessionID] = reason
@@ -170,8 +170,8 @@ final class SessionWatcher: ObservableObject {
             if showSubagents, let stamp = fileStamp(path: path) {
                 // The wide tail read is expensive (up to 4 MB per reload); memoize
                 // the parsed list until the transcript's (mtime, size) changes.
-                let list = subagentCache.value(for: path, stamp: stamp) { [weak self] in
-                    guard let wide = self?.transcriptTail(path: path, maxBytes: 4 * 1024 * 1024)
+                let list = subagentCache.value(for: path, stamp: stamp) {
+                    guard let wide = readTranscript(atPath: path, maxBytes: 4 * 1024 * 1024)
                     else { return .empty }
                     return subagents(fromTranscript: wide)
                 }
@@ -210,19 +210,6 @@ final class SessionWatcher: ObservableObject {
               let mtime = attrs[.modificationDate] as? Date,
               let size = (attrs[.size] as? NSNumber)?.uint64Value else { return nil }
         return FileStamp(mtime: mtime, size: size)
-    }
-
-    /// Reads the last `maxBytes` of a transcript file (whole file if smaller).
-    /// Fail-safe: returns nil on any error. A partial first line is fine —
-    /// `apiErrorReason` scans bottom-up and skips unparseable lines.
-    private func transcriptTail(path: String, maxBytes: Int = 64 * 1024) -> String? {
-        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? handle.close() }
-        guard let end = try? handle.seekToEnd() else { return nil }
-        let start = end > UInt64(maxBytes) ? end - UInt64(maxBytes) : 0
-        try? handle.seek(toOffset: start)
-        guard let data = try? handle.readToEnd(), !data.isEmpty else { return nil }
-        return String(decoding: data, as: UTF8.self)
     }
 
     /// Runs the animation clock only while a lamp is blinking or breathing.
