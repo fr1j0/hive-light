@@ -8,7 +8,8 @@ import Foundation
 ///   would fail wholesale on a torn multibyte sequence, silently freezing
 ///   the model chip and context gauge (#111) — decode lossily so only the
 ///   torn partial line degrades to replacement characters
-/// - torn head: the byte cap can slice mid-line, leaving a partial first line
+/// - torn head: the byte cap can slice mid-line, leaving a partial first line.
+///
 /// nil when the file can't be read (or is empty — no lines to scan either way).
 public func readTranscript(atPath path: String, maxBytes: Int = 64 * 1024) -> String? {
     guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
