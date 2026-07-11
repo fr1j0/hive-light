@@ -37,4 +37,42 @@ final class TranscriptReadingTests: XCTestCase {
     func test_missingFile_isNil() {
         XCTAssertNil(readTranscript(atPath: "/nonexistent/no-such-transcript.jsonl"))
     }
+
+    /// #106: a transcript larger than `maxBytes` reads only the tail. The
+    /// byte-count assertion is the proof of truncation; the extractor
+    /// assertions prove the tail is still usable.
+    func test_fileLargerThanCap_readsOnlyTail() throws {
+        var bytes = Data()
+        for _ in 0..<200 {
+            bytes.append(Data(#"{"type":"assistant","message":{"role":"assistant","model":"claude-3-5-sonnet-20240620","usage":{"input_tokens":1}}}"#.utf8))
+            bytes.append(Data("\n".utf8))
+        }
+        let recent = #"{"type":"assistant","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input_tokens":47929}}}"#
+        bytes.append(Data(recent.utf8))
+
+        let path = try writeFixture(bytes)
+        let cap = recent.utf8.count + 40 // starts the read mid-way through an old line
+        let jsonl = try XCTUnwrap(readTranscript(atPath: path, maxBytes: cap))
+        XCTAssertLessThanOrEqual(jsonl.utf8.count, cap)
+        XCTAssertEqual(lastModelID(transcriptJSONL: jsonl), "claude-opus-4-8")
+        XCTAssertEqual(contextFraction(transcriptJSONL: jsonl), 47_929.0 / 1_000_000.0)
+    }
+
+    /// #106: when the cap slices mid-line, the partial first line still shows
+    /// a tempting `"model"` key but is not valid JSON — the per-line scans
+    /// must skip it, not misparse it.
+    func test_capSlicedFirstLine_isSkippedNotMisparsed() throws {
+        let old = #"{"type":"assistant","message":{"role":"assistant","model":"claude-3-5-sonnet-20240620"}}"#
+        let recent = #"{"type":"assistant","message":{"role":"assistant","model":"claude-opus-4-8"}}"#
+        var bytes = Data((old + "\n").utf8)
+        bytes.append(Data(recent.utf8))
+
+        let path = try writeFixture(bytes)
+        // Keep the recent line whole plus the last 60 bytes of the old line:
+        // enough to include its "model":"claude-3-5-sonnet-20240620" text
+        // while making the line unparseable.
+        let cap = recent.utf8.count + 1 + 60
+        let jsonl = try XCTUnwrap(readTranscript(atPath: path, maxBytes: cap))
+        XCTAssertEqual(lastModelID(transcriptJSONL: jsonl), "claude-opus-4-8")
+    }
 }
