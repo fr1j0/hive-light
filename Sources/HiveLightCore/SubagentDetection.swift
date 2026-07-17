@@ -42,6 +42,14 @@ public struct SubagentList: Equatable, Sendable {
 /// no longer dropped) so the panel can show "X of N done" and struck-through
 /// completed rows.
 ///
+/// Background agents (the harness default for `Agent`) settle differently:
+/// the tool_use gets an immediate "Async agent launched successfully" ack
+/// tool_result while the agent keeps working, and real completion lands later
+/// as a synthetic `<task-notification>` user message carrying the tool_use id
+/// and a status. The ack keeps the agent **running**; the notification settles
+/// it (`completed` → done, anything else → failed) and never counts as a
+/// typed prompt.
+///
 /// Batch scoping: a new typed user prompt clears every *settled* agent (done
 /// or failed — anything with a tool_result) so counts re-base on the current
 /// batch; running agents survive the prompt (a queued message can land while
@@ -72,6 +80,15 @@ public func subagents(fromTranscript jsonl: String) -> SubagentList {
             }
         }
 
+        // A background agent's completion arrives as a string-content user
+        // message, not a tool_result — settle the referenced agent from it.
+        if let text = message["content"] as? String, isTaskNotification(text) {
+            if let id = tagValue("tool-use-id", in: text), seen.contains(id) {
+                errored[id] = tagValue("status", in: text) != "completed"
+            }
+            continue
+        }
+
         guard let content = message["content"] as? [[String: Any]] else { continue }
 
         for block in content {
@@ -84,6 +101,7 @@ public func subagents(fromTranscript jsonl: String) -> SubagentList {
                 order.append(Pending(id: id, label: String(desc.prefix(40))))
             case "tool_result":
                 guard let id = block["tool_use_id"] as? String else { continue }
+                if isBackgroundLaunchAck(block) { continue }   // agent still working
                 errored[id] = (block["is_error"] as? Bool) ?? false
             default:
                 continue
@@ -103,4 +121,31 @@ public func subagents(fromTranscript jsonl: String) -> SubagentList {
         doneCount: visible.filter { $0.state == .done }.count,
         failedCount: visible.filter { $0.state == .failed }.count
     )
+}
+
+/// The immediate ack a background agent dispatch gets while the agent keeps
+/// working — it must not settle the agent. Content is a block array (or a
+/// plain string in older shapes) whose text opens with the ack sentence.
+private func isBackgroundLaunchAck(_ block: [String: Any]) -> Bool {
+    guard (block["is_error"] as? Bool) != true else { return false }
+    let text: String
+    if let s = block["content"] as? String {
+        text = s
+    } else if let blocks = block["content"] as? [[String: Any]],
+              let first = blocks.first(where: { ($0["type"] as? String) == "text" }),
+              let s = first["text"] as? String {
+        text = s
+    } else {
+        return false
+    }
+    return text.hasPrefix("Async agent launched successfully")
+}
+
+/// The text between `<tag>` and `</tag>`, or nil.
+private func tagValue(_ tag: String, in text: String) -> String? {
+    guard let open = text.range(of: "<\(tag)>"),
+          let close = text.range(of: "</\(tag)>", range: open.upperBound..<text.endIndex)
+    else { return nil }
+    return String(text[open.upperBound..<close.lowerBound])
+        .trimmingCharacters(in: .whitespacesAndNewlines)
 }
