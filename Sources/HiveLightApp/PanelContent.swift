@@ -34,7 +34,7 @@ struct PanelContent: View {
         // (Expanded history is user-opened and bounded by its own internal-scroll
         // cap, so it stays out of the estimate.)
         let taskRows = watcher.taskSummaryBySession.values.reduce(0) {
-            $0 + 1 + ($1.doneSubjects.isEmpty ? 0 : 1)
+            $0 + 1 + (taskHistoryToggleText($1) == nil ? 0 : 1)
         }
         let usageRow = usageRowVisible ? 1 : 0
         // Grouped mode adds one ~14pt header per block (~1/3 card height).
