@@ -98,15 +98,6 @@ final class PanelModelTests: XCTestCase {
         XCTAssertFalse(subtitleShowsBranch(for: session))
     }
 
-    func test_taskHistoryOverflowText_countsBeyondVisible() {
-        let summary = TaskSummary(inProgressSubject: "Now", total: 8,
-                                  doneSubjects: ["1", "2", "3", "4", "5", "A", "B"])
-        XCTAssertEqual(taskHistoryOverflowText(summary), "+5 earlier")
-        let allVisible = TaskSummary(inProgressSubject: "Now", total: 3,
-                                     doneSubjects: ["A", "B"])
-        XCTAssertNil(taskHistoryOverflowText(allVisible))
-    }
-
     func test_taskHistoryToggleText_countFreeLabel() {
         let many = TaskSummary(inProgressSubject: "Now", total: 8,
                                doneSubjects: ["1", "2", "3", "4", "5", "A", "B"])

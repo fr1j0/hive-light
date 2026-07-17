@@ -1,7 +1,7 @@
 import Foundation
 
 /// The session's task-list context: the in-progress task, the full completed
-/// history (struck rows + expandable "+N earlier" disclosure), and the total.
+/// history (struck rows under an "earlier tasks" disclosure), and the total.
 public struct TaskSummary: Equatable, Sendable {
     public let inProgressSubject: String   // truncated to 40 chars
     public let total: Int

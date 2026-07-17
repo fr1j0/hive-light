@@ -29,13 +29,12 @@ struct PanelContent: View {
             // rows), so cap its contribution to the panel-size estimate.
             $0 + min($1.visible.count, 8)
         }
-        // Task block at its collapsed baseline: current-task line + up to two
-        // struck rows + optional history disclosure, each weighing like a
-        // subagent mini-row. (Expanded history is user-opened and bounded by
-        // its own internal-scroll cap, so it stays out of the estimate.)
+        // Task block at its collapsed baseline: current-task line + optional
+        // earlier-tasks disclosure, each weighing like a subagent mini-row.
+        // (Expanded history is user-opened and bounded by its own internal-scroll
+        // cap, so it stays out of the estimate.)
         let taskRows = watcher.taskSummaryBySession.values.reduce(0) {
-            $0 + 1 + min($1.doneSubjects.count, taskHistoryVisibleCount)
-               + (taskHistoryOverflowText($1) == nil ? 0 : 1)
+            $0 + 1 + ($1.doneSubjects.isEmpty ? 0 : 1)
         }
         let usageRow = usageRowVisible ? 1 : 0
         // Grouped mode adds one ~14pt header per block (~1/3 card height).
