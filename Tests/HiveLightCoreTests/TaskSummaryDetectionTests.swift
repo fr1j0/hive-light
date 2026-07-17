@@ -30,7 +30,8 @@ final class TaskSummaryDetectionTests: XCTestCase {
                           ("2", "Task 2: render", "in_progress"),
                           ("3", "Task 3: backfill", "pending")])
         XCTAssertEqual(taskSummary(fromTranscript: t),
-                       TaskSummary(inProgressSubject: "Task 2: render", doneCount: 1, total: 3))
+                       TaskSummary(inProgressSubject: "Task 2: render", total: 3,
+                                   doneSubjects: ["Task 1: types"]))
     }
 
     func test_noInProgress_returnsNil() {
@@ -50,7 +51,8 @@ final class TaskSummaryDetectionTests: XCTestCase {
                       updateUse("1", status: "completed"),
                       updateUse("2", status: "in_progress")])
         XCTAssertEqual(taskSummary(fromTranscript: t),
-                       TaskSummary(inProgressSubject: "Task 2: render", doneCount: 1, total: 2))
+                       TaskSummary(inProgressSubject: "Task 2: render", total: 2,
+                                   doneSubjects: ["Task 1: types"]))
     }
 
     func test_updateAfterSnapshot_completingLastInProgress_returnsNil() {
@@ -63,7 +65,7 @@ final class TaskSummaryDetectionTests: XCTestCase {
         let t = join([reminder([("1", "Task 1", "in_progress")]),
                       createUse("c7"), createResult("c7", taskID: "7", subject: "Task 7: docs")])
         XCTAssertEqual(taskSummary(fromTranscript: t),
-                       TaskSummary(inProgressSubject: "Task 1", doneCount: 0, total: 2))
+                       TaskSummary(inProgressSubject: "Task 1", total: 2))
     }
 
     func test_multipleInProgress_mostRecentlyUpdatedWins() {
@@ -76,7 +78,7 @@ final class TaskSummaryDetectionTests: XCTestCase {
         let t = join([reminder([("1", "Task 1", "in_progress")]),
                       updateUse("99", status: "completed")])
         XCTAssertEqual(taskSummary(fromTranscript: t),
-                       TaskSummary(inProgressSubject: "Task 1", doneCount: 0, total: 1))
+                       TaskSummary(inProgressSubject: "Task 1", total: 1))
     }
 
     func test_deletedTaskUpdate_removesFromCounts() {
@@ -85,7 +87,8 @@ final class TaskSummaryDetectionTests: XCTestCase {
                                 ("3", "Task 3", "pending")]),
                       updateUse("3", status: "deleted")])
         XCTAssertEqual(taskSummary(fromTranscript: t),
-                       TaskSummary(inProgressSubject: "Task 1", doneCount: 1, total: 2))
+                       TaskSummary(inProgressSubject: "Task 1", total: 2,
+                                   doneSubjects: ["Task 2"]))
     }
 
     func test_malformedCreateResult_ignored() {
@@ -104,13 +107,41 @@ final class TaskSummaryDetectionTests: XCTestCase {
         let t = join([reminder([("1", "Old task", "in_progress")]),
                       reminder([("1", "Task 1", "completed"), ("2", "Task 2", "in_progress")])])
         XCTAssertEqual(taskSummary(fromTranscript: t),
-                       TaskSummary(inProgressSubject: "Task 2", doneCount: 1, total: 2))
+                       TaskSummary(inProgressSubject: "Task 2", total: 2,
+                                   doneSubjects: ["Task 1"]))
     }
 
     func test_longSubject_truncatedTo40() {
         let long = String(repeating: "x", count: 80)
         let t = reminder([("1", long, "in_progress")])
         XCTAssertEqual(taskSummary(fromTranscript: t)?.inProgressSubject.count, 40)
+    }
+
+    func test_doneSubjects_allCompleted_ascendingCompletionOrder() {
+        // Tasks complete in order 2, 1, 3 → full history in that order.
+        let t = join([reminder([("1", "Task 1", "pending"), ("2", "Task 2", "pending"),
+                                ("3", "Task 3", "pending"), ("4", "Task 4", "in_progress")]),
+                      updateUse("2", status: "completed"),
+                      updateUse("1", status: "completed"),
+                      updateUse("3", status: "completed")])
+        XCTAssertEqual(taskSummary(fromTranscript: t)?.doneSubjects, ["Task 2", "Task 1", "Task 3"])
+    }
+
+    func test_doneSubjects_snapshotOnly_usesListOrder() {
+        let t = reminder([("1", "Task 1", "completed"), ("2", "Task 2", "completed"),
+                          ("3", "Task 3", "completed"), ("4", "Task 4", "in_progress")])
+        XCTAssertEqual(taskSummary(fromTranscript: t)?.doneSubjects, ["Task 1", "Task 2", "Task 3"])
+    }
+
+    func test_doneSubjects_noneCompleted_isEmpty() {
+        let none = reminder([("1", "Task 1", "in_progress")])
+        XCTAssertEqual(taskSummary(fromTranscript: none)?.doneSubjects, [])
+    }
+
+    func test_doneCount_derivedFromDoneSubjects() {
+        let t = reminder([("1", "Task 1", "completed"), ("2", "Task 2", "completed"),
+                          ("3", "Task 3", "in_progress")])
+        XCTAssertEqual(taskSummary(fromTranscript: t)?.doneCount, 2)
     }
 
     func test_nonCreateToolResult_withCreateShapedText_ignored() {

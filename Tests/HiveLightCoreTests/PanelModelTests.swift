@@ -98,9 +98,20 @@ final class PanelModelTests: XCTestCase {
         XCTAssertFalse(subtitleShowsBranch(for: session))
     }
 
+    func test_taskHistoryOverflowText_countsBeyondVisible() {
+        let summary = TaskSummary(inProgressSubject: "Now", total: 8,
+                                  doneSubjects: ["1", "2", "3", "4", "5", "A", "B"])
+        XCTAssertEqual(taskHistoryOverflowText(summary), "+5 earlier")
+        let allVisible = TaskSummary(inProgressSubject: "Now", total: 3,
+                                     doneSubjects: ["A", "B"])
+        XCTAssertNil(taskHistoryOverflowText(allVisible))
+    }
+
     func test_taskLineText_subjectDotCounts() {
+        // "tasks" suffix disambiguates the count from the subagent block's
+        // "X of N done" directly below it.
         let summary = TaskSummary(inProgressSubject: "Task 6: AGENTS.md docs + quality gate",
-                                  doneCount: 5, total: 7)
-        XCTAssertEqual(taskLineText(summary), "Task 6: AGENTS.md docs + quality gate · 5/7")
+                                  total: 7, doneSubjects: ["1", "2", "3", "4", "5"])
+        XCTAssertEqual(taskLineText(summary), "Task 6: AGENTS.md docs + quality gate · 5/7 tasks")
     }
 }

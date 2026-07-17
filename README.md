@@ -58,17 +58,22 @@ Click the icon for the full picture:
 - A hive-voiced header — *Hive is humming* over the factual counts
   (`2 working · 1 idle`) — whose lamp halo breathes while work is underway.
 - Sessions grouped by project, in a stable order — a status change recolors a
-  row, never moves it. Each card: status dot, Git branch label, context gauge,
-  model badge, a live elapsed-state timer, and — when a session is blocked —
-  the actual question or permission request it's waiting on.
+  row, never moves it (or sorted by opening order, your pick). Each card:
+  status dot, Git branch label, context gauge, model badge, a live
+  elapsed-state timer, and — when a session is blocked — the actual question
+  or permission request it's waiting on.
+- Running task-driven sessions show what they're on: the current tracker task
+  with progress (`Task 6: docs + quality gate · 5/7 tasks`), recently
+  completed tasks struck through, and a `+N earlier` disclosure that unfolds
+  the full history.
 - Running sessions with parallel subagents show them as collapsible rows
-  inside the card.
+  inside the card, nested under the task that owns them.
 - Click a card to jump to that session's terminal.
 - An opt-in usage strip — 5-hour and weekly windows — that opens a full
   usage view with plan limits and per-model daily history.
-- Settings flip in place: show subagents, usage stats and plan limits, launch
-  at login, needs-you notifications, and one-click install or removal of the
-  Claude Code hooks.
+- Settings flip in place: session activity (tasks + subagents), usage stats
+  and plan limits, session sort order, launch at login, needs-you
+  notifications, and one-click install or removal of the Claude Code hooks.
 - Quit and the running version live in the footer.
 
 ## Features
