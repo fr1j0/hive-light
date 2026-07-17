@@ -124,20 +124,10 @@ public func subagents(fromTranscript jsonl: String) -> SubagentList {
 }
 
 /// The immediate ack a background agent dispatch gets while the agent keeps
-/// working — it must not settle the agent. Content is a block array (or a
-/// plain string in older shapes) whose text opens with the ack sentence.
+/// working — it must not settle the agent.
 private func isBackgroundLaunchAck(_ block: [String: Any]) -> Bool {
-    guard (block["is_error"] as? Bool) != true else { return false }
-    let text: String
-    if let s = block["content"] as? String {
-        text = s
-    } else if let blocks = block["content"] as? [[String: Any]],
-              let first = blocks.first(where: { ($0["type"] as? String) == "text" }),
-              let s = first["text"] as? String {
-        text = s
-    } else {
-        return false
-    }
+    guard (block["is_error"] as? Bool) != true,
+          let text = toolResultText(block) else { return false }
     return text.hasPrefix("Async agent launched successfully")
 }
 

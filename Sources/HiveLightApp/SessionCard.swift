@@ -33,6 +33,7 @@ struct SessionCard: View {
     let session: Session
     let errorReason: String?
     let subagents: SubagentList?
+    let taskSummary: TaskSummary?
     let now: Date
     /// Inside a 2+ repo block (grouped order): the block header owns the
     /// repo name, so the card title leads with the branch and the
@@ -114,6 +115,23 @@ struct SessionCard: View {
                 }
                 .padding(.leading, 18)
             }
+            if let summary = taskSummary {
+                // Owning-task context: which tracker task the session is on,
+                // plus list progress. One info kind, one treatment, fixed slot
+                // above the fan-out (renders with or without one).
+                HStack(spacing: 4) {
+                    Image(systemName: "arrowtriangle.right.fill")
+                        .font(.system(size: 6))
+                        .foregroundStyle(.tertiary)
+                    Text(taskLineText(summary))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .padding(.leading, 18)
+                .padding(.top, 2)
+            }
             if let list = subagents, !list.isEmpty {
                 SubagentRows(list: list, collapsed: $subagentsCollapsed)
                     .padding(.leading, 18)
@@ -134,6 +152,7 @@ struct SessionCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel([HiveLightCore.accessibilityLabel(for: session),
                              cardSubtitle(for: session, errorReason: errorReason),
+                             taskSummary.map { "task \(taskLineText($0))" },
                              session.model.map { "model \(shortModelName($0))" },
                              session.contextFraction.map { contextTooltip(fraction: $0) }]
                             .compactMap { $0 }.joined(separator: ". "))

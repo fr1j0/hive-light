@@ -16,6 +16,7 @@ final class SessionWatcher: ObservableObject {
     @Published private(set) var summary: String? = nil
     @Published private(set) var animationPhase: Double = 0
     @Published private(set) var subagentsBySession: [String: SubagentList] = [:]
+    @Published private(set) var taskSummaryBySession: [String: TaskSummary] = [:]
     /// Opt-in: show a running session's parallel subagents as indented rows.
     @Published var showSubagents: Bool {
         didSet {
@@ -64,7 +65,13 @@ final class SessionWatcher: ObservableObject {
     /// Previous reload's statuses; nil until the first reload has taken a
     /// baseline, so launching never replays already-red sessions.
     private var lastStatuses: [String: SessionStatus]? = nil
-    private let subagentCache = FileMemoCache<SubagentList>()
+    /// One wide transcript read yields both activity results — memoized
+    /// together so tasks add no extra I/O.
+    private struct TranscriptScan {
+        let subagents: SubagentList
+        let taskSummary: TaskSummary?
+    }
+    private let transcriptScanCache = FileMemoCache<TranscriptScan>()
     private let store: SessionStore
     private let installer: HookInstaller
     private var stream: FSEventStreamRef?
@@ -158,6 +165,7 @@ final class SessionWatcher: ObservableObject {
         var live = liveSessions(all, now: Date())
         var reasons: [String: String] = [:]
         var subagentMap: [String: SubagentList] = [:]
+        var taskMap: [String: TaskSummary] = [:]
         var scannedTranscripts: Set<String> = []
         for i in live.indices where live[i].status == .running {
             guard let path = live[i].transcriptPath else { continue }
@@ -169,17 +177,19 @@ final class SessionWatcher: ObservableObject {
             }
             if showSubagents, let stamp = fileStamp(path: path) {
                 // The wide tail read is expensive (up to 4 MB per reload); memoize
-                // the parsed list until the transcript's (mtime, size) changes.
-                let list = subagentCache.value(for: path, stamp: stamp) {
+                // the parsed results until the transcript's (mtime, size) changes.
+                let scan = transcriptScanCache.value(for: path, stamp: stamp) {
                     guard let wide = readTranscript(atPath: path, maxBytes: 4 * 1024 * 1024)
-                    else { return .empty }
-                    return subagents(fromTranscript: wide)
+                    else { return TranscriptScan(subagents: .empty, taskSummary: nil) }
+                    return TranscriptScan(subagents: subagents(fromTranscript: wide),
+                                          taskSummary: taskSummary(fromTranscript: wide))
                 }
-                if !list.isEmpty { subagentMap[live[i].sessionID] = list }
+                if !scan.subagents.isEmpty { subagentMap[live[i].sessionID] = scan.subagents }
+                if let summary = scan.taskSummary { taskMap[live[i].sessionID] = summary }
                 scannedTranscripts.insert(path)
             }
         }
-        subagentCache.evict(keeping: scannedTranscripts)
+        transcriptScanCache.evict(keeping: scannedTranscripts)
         // Idle headless runs (plugin jobs, claude -p) are noise: dropped from
         // the rows AND the counts/light so they can't hold the menu hostage.
         let sorted = sortedForMenu(visibleSessions(live), order: sessionOrder)
@@ -198,6 +208,7 @@ final class SessionWatcher: ObservableObject {
         self.sessions = sorted
         self.errorReasons = reasons
         self.subagentsBySession = subagentMap
+        self.taskSummaryBySession = taskMap
         let state = iconState(for: sorted)
         self.icon = state
         self.summary = summaryText(for: statusCounts(for: sorted))
