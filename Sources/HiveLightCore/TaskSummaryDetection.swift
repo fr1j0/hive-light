@@ -64,9 +64,13 @@ public func taskSummary(fromTranscript jsonl: String) -> TaskSummary? {
                    let taskID = input["taskId"] as? String,
                    let status = input["status"] as? String,
                    tasks[taskID] != nil {
-                    counter += 1
-                    tasks[taskID]?.status = status
-                    tasks[taskID]?.recency = counter
+                    if status == "deleted" {
+                        tasks.removeValue(forKey: taskID)
+                    } else {
+                        counter += 1
+                        tasks[taskID]?.status = status
+                        tasks[taskID]?.recency = counter
+                    }
                 }
             case "tool_result":
                 guard let useID = block["tool_use_id"] as? String,
@@ -107,7 +111,7 @@ private func parseCreateResult(_ text: String) -> (id: String, subject: String)?
 
 /// The plain text of a tool_result block — string content or the first text
 /// block of block-array content.
-public func toolResultText(_ block: [String: Any]) -> String? {
+func toolResultText(_ block: [String: Any]) -> String? {
     if let s = block["content"] as? String { return s }
     if let blocks = block["content"] as? [[String: Any]],
        let first = blocks.first(where: { ($0["type"] as? String) == "text" }),

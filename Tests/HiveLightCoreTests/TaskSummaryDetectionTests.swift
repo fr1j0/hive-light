@@ -79,6 +79,15 @@ final class TaskSummaryDetectionTests: XCTestCase {
                        TaskSummary(inProgressSubject: "Task 1", doneCount: 0, total: 1))
     }
 
+    func test_deletedTaskUpdate_removesFromCounts() {
+        let t = join([reminder([("1", "Task 1", "in_progress"),
+                                ("2", "Task 2", "completed"),
+                                ("3", "Task 3", "pending")]),
+                      updateUse("3", status: "deleted")])
+        XCTAssertEqual(taskSummary(fromTranscript: t),
+                       TaskSummary(inProgressSubject: "Task 1", doneCount: 1, total: 2))
+    }
+
     func test_malformedCreateResult_ignored() {
         let t = join([reminder([("1", "Task 1", "in_progress")]),
                       createUse("c1"),
