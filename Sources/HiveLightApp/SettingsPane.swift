@@ -48,7 +48,7 @@ struct SettingsPane: View {
                                               ("Opened", SessionOrder.opened)])
                 }
                 insetDivider
-                row("Show subagents") {
+                row("Show session activity") {
                     MiniSwitch(isOn: $watcher.showSubagents, label: "Show session activity")
                 }
             }
