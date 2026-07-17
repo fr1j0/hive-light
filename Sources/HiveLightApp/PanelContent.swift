@@ -29,11 +29,13 @@ struct PanelContent: View {
             // rows), so cap its contribution to the panel-size estimate.
             $0 + min($1.visible.count, 8)
         }
+        // Task lines weigh the same as subagent mini-rows.
+        let taskRows = watcher.taskSummaryBySession.count
         let usageRow = usageRowVisible ? 1 : 0
         // Grouped mode adds one ~14pt header per block (~1/3 card height).
         let headerRows = watcher.sessionOrder == .project
             ? (sessionBlocks(watcher.sessions).count + 2) / 3 : 0
-        return watcher.sessions.count + subagentRows / 3 + usageRow + headerRows
+        return watcher.sessions.count + (subagentRows + taskRows) / 3 + usageRow + headerRows
     }
 
     /// The usage row is the door to the Usage view — visible when its toggle
@@ -177,6 +179,7 @@ struct PanelContent: View {
         SessionCard(session: session,
                     errorReason: watcher.errorReasons[session.sessionID],
                     subagents: watcher.subagentsBySession[session.sessionID],
+                    taskSummary: watcher.taskSummaryBySession[session.sessionID],
                     now: now,
                     grouped: grouped)
     }
