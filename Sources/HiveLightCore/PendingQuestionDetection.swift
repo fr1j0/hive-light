@@ -68,9 +68,15 @@ private func questionText(toolName: String, input: [String: Any]?) -> String {
 func isRealUserPrompt(obj: [String: Any], message: [String: Any]) -> Bool {
     let isUser = (obj["type"] as? String) == "user" || (message["role"] as? String) == "user"
     guard isUser else { return false }
-    if message["content"] is String { return true }
+    if let text = message["content"] as? String { return !isTaskNotification(text) }
     if let blocks = message["content"] as? [[String: Any]] {
         return blocks.contains { ($0["type"] as? String) == "text" }
     }
     return false
+}
+
+/// A synthetic background-agent completion message — user-typed in shape only.
+/// It must never count as a real prompt (it would clear settled fan-outs).
+func isTaskNotification(_ text: String) -> Bool {
+    text.hasPrefix("<task-notification>")
 }

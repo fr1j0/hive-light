@@ -148,4 +148,70 @@ final class SubagentDetectionTests: XCTestCase {
         XCTAssertTrue(subagents(fromTranscript: "").visible.isEmpty)
         XCTAssertTrue(subagents(fromTranscript: "not json\n{bad").visible.isEmpty)
     }
+
+    // MARK: - Background agents (async launch + task-notification lifecycle)
+
+    /// The immediate tool_result a background `Agent` dispatch gets (~3s after
+    /// launch). Shape captured from a real transcript: block-array content whose
+    /// text opens with the launch-ack sentence.
+    private func backgroundLaunchAck(_ id: String) -> String {
+        #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"\#(id)","content":[{"type":"text","text":"Async agent launched successfully. (This tool result is internal metadata)\nagentId: abc123\nThe agent is working in the background."}]}]}}"#
+    }
+
+    /// The synthetic user message that lands when a background agent finishes.
+    /// Real shape: plain-string content opening with <task-notification>.
+    private func taskNotification(toolUseID: String, status: String) -> String {
+        #"{"type":"user","message":{"role":"user","content":"<task-notification>\n<task-id>a4281117a594de67e</task-id>\n<tool-use-id>\#(toolUseID)</tool-use-id>\n<output-file>/tmp/tasks/a.output</output-file>\n<status>\#(status)</status>\n<summary>Agent finished</summary>\n</task-notification>"}}"#
+    }
+
+    func test_backgroundLaunchAck_keepsAgentRunning() {
+        let t = join([toolUse("t1", "Implement Task 5", name: "Agent"),
+                      backgroundLaunchAck("t1")])
+        XCTAssertEqual(subagents(fromTranscript: t).visible,
+                       [Subagent(id: "t1", label: "Implement Task 5", state: .running)])
+    }
+
+    func test_taskNotification_completed_settlesAsDone() {
+        let t = join([toolUse("t1", "Implement Task 5", name: "Agent"),
+                      backgroundLaunchAck("t1"),
+                      taskNotification(toolUseID: "t1", status: "completed")])
+        let list = subagents(fromTranscript: t)
+        XCTAssertEqual(list.visible, [Subagent(id: "t1", label: "Implement Task 5", state: .done)])
+        XCTAssertEqual(list.doneCount, 1)
+    }
+
+    func test_taskNotification_nonCompleted_settlesAsFailed() {
+        let t = join([toolUse("t1", "Implement Task 5", name: "Agent"),
+                      backgroundLaunchAck("t1"),
+                      taskNotification(toolUseID: "t1", status: "failed")])
+        XCTAssertEqual(subagents(fromTranscript: t).visible,
+                       [Subagent(id: "t1", label: "Implement Task 5", state: .failed)])
+    }
+
+    func test_taskNotification_doesNotClearSettledBatch() {
+        // A notification is synthetic — it must not act as a typed prompt that
+        // supersedes the settled part of the batch.
+        let t = join([toolUse("a", "sync worker"), toolResult("a", isError: false),
+                      toolUse("b", "bg worker", name: "Agent"), backgroundLaunchAck("b"),
+                      taskNotification(toolUseID: "b", status: "completed")])
+        let list = subagents(fromTranscript: t)
+        XCTAssertEqual(list.visible.map(\.id), ["a", "b"])
+        XCTAssertEqual(list.doneCount, 2)
+    }
+
+    func test_backgroundAgent_stillRunning_survivesUserPrompt() {
+        let t = join([toolUse("t1", "bg worker", name: "Agent"),
+                      backgroundLaunchAck("t1"),
+                      userPrompt("continue")])
+        XCTAssertEqual(subagents(fromTranscript: t).visible,
+                       [Subagent(id: "t1", label: "bg worker", state: .running)])
+    }
+
+    func test_backgroundAgent_settledByNotification_clearedByLaterPrompt() {
+        let t = join([toolUse("t1", "bg worker", name: "Agent"),
+                      backgroundLaunchAck("t1"),
+                      taskNotification(toolUseID: "t1", status: "completed"),
+                      userPrompt("continue")])
+        XCTAssertTrue(subagents(fromTranscript: t).visible.isEmpty)
+    }
 }
