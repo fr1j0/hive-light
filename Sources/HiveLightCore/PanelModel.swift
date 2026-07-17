@@ -86,5 +86,11 @@ public func taskHistoryOverflowText(_ summary: TaskSummary) -> String? {
     return hidden > 0 ? "+\(hidden) earlier" : nil
 }
 
+/// The count-free disclosure label hiding the full completed-task history,
+/// or nil when nothing has finished yet.
+public func taskHistoryToggleText(_ summary: TaskSummary) -> String? {
+    summary.doneSubjects.isEmpty ? nil : "earlier tasks"
+}
+
 /// How many completed tasks stay visible when the history is collapsed.
 public let taskHistoryVisibleCount = 2
