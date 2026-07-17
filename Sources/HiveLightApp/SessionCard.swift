@@ -117,24 +117,21 @@ struct SessionCard: View {
             }
             if let summary = taskSummary {
                 // Owning-task context: which tracker task the session is on,
-                // plus list progress. One info kind, one treatment, fixed slot
-                // above the fan-out (renders with or without one).
-                HStack(spacing: 4) {
-                    Image(systemName: "arrowtriangle.right.fill")
-                        .font(.system(size: 6))
-                        .foregroundStyle(.tertiary)
-                    Text(taskLineText(summary))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                .padding(.leading, 18)
-                .padding(.top, 2)
+                // plus list progress. No leading glyph — a marker there reads
+                // as a disclosure toggle, which this line is not.
+                Text(taskLineText(summary))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.leading, 18)
+                    .padding(.top, 2)
             }
             if let list = subagents, !list.isEmpty {
+                // With an owning-task line above, the fan-out nests one level
+                // deeper — the agents belong to the task, not the session row.
                 SubagentRows(list: list, collapsed: $subagentsCollapsed)
-                    .padding(.leading, 18)
+                    .padding(.leading, taskSummary == nil ? 18 : 30)
                     .padding(.top, 3)
             }
         }

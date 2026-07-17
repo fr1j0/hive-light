@@ -72,7 +72,9 @@ public func contextTooltip(fraction: Double) -> String {
     "context \(Int((fraction * 100).rounded()))% used"
 }
 
-/// The owning-task line under a session row: "<subject> · done/total".
+/// The owning-task line under a session row: "<subject> · done/total tasks".
+/// The unit suffix keeps the count from being misread against the subagent
+/// block's "X of N done" rendered directly below it.
 public func taskLineText(_ summary: TaskSummary) -> String {
-    "\(summary.inProgressSubject) · \(summary.doneCount)/\(summary.total)"
+    "\(summary.inProgressSubject) · \(summary.doneCount)/\(summary.total) tasks"
 }

@@ -99,8 +99,10 @@ final class PanelModelTests: XCTestCase {
     }
 
     func test_taskLineText_subjectDotCounts() {
+        // "tasks" suffix disambiguates the count from the subagent block's
+        // "X of N done" directly below it.
         let summary = TaskSummary(inProgressSubject: "Task 6: AGENTS.md docs + quality gate",
                                   doneCount: 5, total: 7)
-        XCTAssertEqual(taskLineText(summary), "Task 6: AGENTS.md docs + quality gate · 5/7")
+        XCTAssertEqual(taskLineText(summary), "Task 6: AGENTS.md docs + quality gate · 5/7 tasks")
     }
 }
