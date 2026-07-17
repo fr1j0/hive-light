@@ -78,3 +78,13 @@ public func contextTooltip(fraction: Double) -> String {
 public func taskLineText(_ summary: TaskSummary) -> String {
     "\(summary.inProgressSubject) · \(summary.doneCount)/\(summary.total) tasks"
 }
+
+/// The "+N earlier" disclosure label for completed tasks beyond the two
+/// struck rows the card always shows, or nil when nothing is hidden.
+public func taskHistoryOverflowText(_ summary: TaskSummary) -> String? {
+    let hidden = summary.doneSubjects.count - taskHistoryVisibleCount
+    return hidden > 0 ? "+\(hidden) earlier" : nil
+}
+
+/// How many completed tasks stay visible when the history is collapsed.
+public let taskHistoryVisibleCount = 2

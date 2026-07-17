@@ -42,6 +42,7 @@ struct SessionCard: View {
 
     /// Per-card, in-memory only — resets on relaunch by design.
     @State private var subagentsCollapsed = false
+    @State private var taskHistoryExpanded = false
     @State private var hovering = false
 
     var body: some View {
@@ -116,14 +117,7 @@ struct SessionCard: View {
                 .padding(.leading, 18)
             }
             if let summary = taskSummary {
-                // Owning-task context: which tracker task the session is on,
-                // plus list progress. No leading glyph — a marker there reads
-                // as a disclosure toggle, which this line is not.
-                Text(taskLineText(summary))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                TaskBlock(summary: summary, historyExpanded: $taskHistoryExpanded)
                     .padding(.leading, 18)
                     .padding(.top, 2)
             }
@@ -156,6 +150,83 @@ struct SessionCard: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { TerminalFocuser.focus(session) }
     }
+}
+
+/// The owning-task block: an optional "+N earlier" disclosure that unfolds
+/// the full completed history chronologically, the two most recent completed
+/// tasks struck in the fan-out's settled treatment, then the current task at
+/// full text strength behind the terminal's ■ marker.
+struct TaskBlock: View {
+    let summary: TaskSummary
+    @Binding var historyExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let overflow = taskHistoryOverflowText(summary) {
+                Button {
+                    withAnimation(.easeOut(duration: 0.12)) { historyExpanded.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: historyExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 8, weight: .bold))
+                        Text(overflow)
+                            .font(.system(size: 10.5))
+                    }
+                    .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+
+                if historyExpanded {
+                    // Chronological unfold: earlier tasks appear above the
+                    // always-visible recent two. Long histories scroll
+                    // internally, same cap as the fan-out block.
+                    let earlier = summary.doneSubjects.dropLast(taskHistoryVisibleCount)
+                    if earlier.count > Self.maxInlineRows {
+                        ScrollView { historyRows(Array(earlier)) }
+                            .frame(height: Self.scrollBlockHeight)
+                    } else {
+                        historyRows(Array(earlier))
+                    }
+                }
+            }
+            historyRows(summary.doneSubjects.suffix(taskHistoryVisibleCount).map { $0 })
+            HStack(spacing: 5) {
+                Rectangle()
+                    .fill(PanelPalette.color(for: .running))
+                    .frame(width: 7, height: 7)
+                    .cornerRadius(1.5)
+                (Text(summary.inProgressSubject)
+                    .foregroundColor(.primary)
+                 + Text(" · \(summary.doneCount)/\(summary.total) tasks")
+                    .foregroundColor(Color(nsColor: .tertiaryLabelColor)))
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+    }
+
+    @ViewBuilder private func historyRows(_ subjects: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(subjects.enumerated()), id: \.offset) { _, subject in
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(PanelPalette.green.opacity(0.7))
+                        .frame(width: 10)
+                    Text(subject)
+                        .font(.system(size: 11))
+                        .strikethrough()
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+        }
+    }
+
+    private static let maxInlineRows = 8
+    private static let scrollBlockHeight: CGFloat = 128
 }
 
 /// The collapsible subagent block inside a card. Expanded: named mini-rows

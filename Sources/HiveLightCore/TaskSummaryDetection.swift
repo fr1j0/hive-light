@@ -1,15 +1,20 @@
 import Foundation
 
-/// The session's task-list context: the in-progress task plus progress counts.
+/// The session's task-list context: the in-progress task, the full completed
+/// history (struck rows + expandable "+N earlier" disclosure), and the total.
 public struct TaskSummary: Equatable, Sendable {
     public let inProgressSubject: String   // truncated to 40 chars
-    public let doneCount: Int
     public let total: Int
+    /// Every completed subject, ascending completion order — the card shows
+    /// the last two and hides the rest behind the history disclosure.
+    public let doneSubjects: [String]
 
-    public init(inProgressSubject: String, doneCount: Int, total: Int) {
+    public var doneCount: Int { doneSubjects.count }
+
+    public init(inProgressSubject: String, total: Int, doneSubjects: [String] = []) {
         self.inProgressSubject = inProgressSubject
-        self.doneCount = doneCount
         self.total = total
+        self.doneSubjects = doneSubjects
     }
 }
 
@@ -91,10 +96,12 @@ public func taskSummary(fromTranscript jsonl: String) -> TaskSummary? {
         .filter({ $0.status == "in_progress" })
         .max(by: { $0.recency < $1.recency })
     else { return nil }
+    let done = tasks.values.filter { $0.status == "completed" }
+        .sorted { $0.recency < $1.recency }
     return TaskSummary(
         inProgressSubject: String(current.subject.prefix(40)),
-        doneCount: tasks.values.filter { $0.status == "completed" }.count,
-        total: tasks.count
+        total: tasks.count,
+        doneSubjects: done.map { String($0.subject.prefix(40)) }
     )
 }
 
