@@ -71,3 +71,8 @@ public func contextSegments(fraction: Double) -> Int {
 public func contextTooltip(fraction: Double) -> String {
     "context \(Int((fraction * 100).rounded()))% used"
 }
+
+/// The owning-task line under a session row: "<subject> · done/total".
+public func taskLineText(_ summary: TaskSummary) -> String {
+    "\(summary.inProgressSubject) · \(summary.doneCount)/\(summary.total)"
+}

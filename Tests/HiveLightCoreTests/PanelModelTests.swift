@@ -97,4 +97,10 @@ final class PanelModelTests: XCTestCase {
                        "API error: rate limited")
         XCTAssertFalse(subtitleShowsBranch(for: session))
     }
+
+    func test_taskLineText_subjectDotCounts() {
+        let summary = TaskSummary(inProgressSubject: "Task 6: AGENTS.md docs + quality gate",
+                                  doneCount: 5, total: 7)
+        XCTAssertEqual(taskLineText(summary), "Task 6: AGENTS.md docs + quality gate · 5/7")
+    }
 }
