@@ -68,6 +68,21 @@ struct SessionCard: View {
                 // carry no text baseline, so the row's .firstTextBaseline
                 // alignment would seat them by their bottom edge instead.
                 HStack(spacing: 5) {
+                    if let model = session.model {
+                        // Model chip (#105): one fixed home on the title row —
+                        // visible in every mode/state, unlike the old subtitle
+                        // slot that vanished with the row (grouped+running).
+                        Text(shortModelName(model).uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .kerning(0.5)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.primary.opacity(0.09)))
+                            .layoutPriority(1)
+                            .help(model)
+                    }
                     if let fraction = session.contextFraction {
                         ContextTicks(fraction: fraction)
                     }
@@ -98,21 +113,6 @@ struct SessionCard: View {
                                          : AnyShapeStyle(.secondary))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                    if let model = session.model {
-                        Spacer(minLength: 6)
-                        // Model chip (#105): trailing edge, never compresses —
-                        // the subtitle text truncates instead.
-                        Text(shortModelName(model).uppercased())
-                            .font(.system(size: 9, weight: .semibold))
-                            .kerning(0.5)
-                            .foregroundStyle(.tertiary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.primary.opacity(0.09)))
-                            .layoutPriority(1)
-                            .help(model)
-                    }
                 }
                 .padding(.leading, 18)
             }
