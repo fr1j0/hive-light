@@ -12,13 +12,11 @@ struct PanelContent: View {
     @State private var showingUsage = false
     @StateObject private var usage = UsageScanner()
     @StateObject private var limitsFetcher = LimitsFetcher()
-    /// Past this estimated weight the list scrolls at a fixed height so the
-    /// footer stays reachable. Below it, a plain stack hugs the content —
-    /// the .window panel sizes to ideal height, and a bare ScrollView's
-    /// ideal is ~zero (it collapses; measuring back is a layout deadlock,
-    /// since a zero-height ScrollView never lays out its content).
-    private static let scrollThreshold = 8
-    private static let scrolledListHeight: CGFloat = 480
+    // Past the panelScrollThreshold weight the list scrolls at a height that
+    // tracks the estimate (panelListScrollHeight). Below it, a plain stack
+    // hugs the content — the .window panel sizes to ideal height, and a bare
+    // ScrollView's ideal is ~zero (it collapses; measuring back is a layout
+    // deadlock, since a zero-height ScrollView never lays out its content).
 
     /// Deterministic pre-layout size estimate: one unit per session card,
     /// with expanded subagent mini-rows (~1/3 card height each) folded in so
@@ -119,11 +117,11 @@ struct PanelContent: View {
             .padding(.horizontal, 10)
             Divider()
 
-            if estimatedRowWeight > Self.scrollThreshold {
+            if let height = panelListScrollHeight(forRowWeight: estimatedRowWeight) {
                 ScrollView {
                     sessionRows(now: now)
                 }
-                .frame(height: Self.scrolledListHeight)
+                .frame(height: height)
             } else {
                 sessionRows(now: now)
             }

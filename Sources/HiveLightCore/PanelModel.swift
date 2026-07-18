@@ -91,3 +91,18 @@ public func taskProgressFraction(_ summary: TaskSummary) -> Double {
     guard summary.total > 0 else { return 0 }
     return min(max(Double(summary.doneCount) / Double(summary.total), 0), 1)
 }
+
+/// The session list's scroll-frame height for a pre-layout row-weight
+/// estimate, or nil at/under the threshold (the list hugs its content and
+/// needs no frame). Past the threshold the height TRACKS the estimate —
+/// one weight unit ≈ one plain card (~44pt) — capped at 480. The old fixed
+/// 480 turned the threshold into a cliff: an estimate of 9 (~396pt of real
+/// content) reserved the full 480 and rendered the difference as dead space
+/// between the last card and the usage strip.
+public func panelListScrollHeight(forRowWeight weight: Int) -> CGFloat? {
+    guard weight > panelScrollThreshold else { return nil }
+    return min(480, CGFloat(weight) * 44)
+}
+
+/// Past this estimated weight the list scrolls so the footer stays reachable.
+public let panelScrollThreshold = 8

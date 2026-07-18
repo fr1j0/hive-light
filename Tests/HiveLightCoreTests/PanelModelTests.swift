@@ -120,6 +120,19 @@ final class PanelModelTests: XCTestCase {
             inProgressSubject: "n", total: 0, doneSubjects: [])), 0)
     }
 
+    func test_panelListScrollHeight_tracksWeightPastThreshold() {
+        // At or under the threshold the list hugs content (nil = no scroll
+        // frame). Past it, the frame tracks the estimate instead of jumping
+        // to the cap — a weight-9 list is ~396pt of content, and pinning it
+        // to 480 rendered ~90pt of dead space above the usage strip.
+        XCTAssertNil(panelListScrollHeight(forRowWeight: 0))
+        XCTAssertNil(panelListScrollHeight(forRowWeight: 8))
+        XCTAssertEqual(panelListScrollHeight(forRowWeight: 9), 396)
+        XCTAssertEqual(panelListScrollHeight(forRowWeight: 10), 440)
+        XCTAssertEqual(panelListScrollHeight(forRowWeight: 11), 480)
+        XCTAssertEqual(panelListScrollHeight(forRowWeight: 40), 480)
+    }
+
     func test_taskLineText_subjectDotCounts() {
         // "tasks" suffix disambiguates the count from the subagent block's
         // "X of N done" directly below it.
