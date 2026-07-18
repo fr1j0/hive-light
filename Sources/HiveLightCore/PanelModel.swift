@@ -106,3 +106,19 @@ public func panelListScrollHeight(forRowWeight weight: Int) -> CGFloat? {
 
 /// Past this estimated weight the list scrolls so the footer stays reachable.
 public let panelScrollThreshold = 8
+
+/// Which row hosts the model chip (#105). The chip rides the first row that
+/// exists below the title — subtitle, then the current-task row, then the
+/// subagent fan-out header — and only gets a row of its own when the card has
+/// none of them. A chip-only row above other content reads as a gap.
+public enum ChipHostRow: Equatable, Sendable {
+    case subtitleRow, taskRow, subagentRow, ownRow
+}
+
+public func chipHostRow(hasSubtitle: Bool, hasTaskSummary: Bool,
+                        hasSubagents: Bool) -> ChipHostRow {
+    if hasSubtitle { return .subtitleRow }
+    if hasTaskSummary { return .taskRow }
+    if hasSubagents { return .subagentRow }
+    return .ownRow
+}

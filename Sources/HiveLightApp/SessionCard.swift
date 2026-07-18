@@ -94,8 +94,10 @@ struct SessionCard: View {
                       !(grouped && subtitleShowsBranch(for: session)) else { return nil }
                 return s
             }()
-            let chipRidesTaskRow = visibleSubtitle == nil && taskSummary != nil
-            if visibleSubtitle != nil || (session.model != nil && !chipRidesTaskRow) {
+            let chipHost = chipHostRow(hasSubtitle: visibleSubtitle != nil,
+                                       hasTaskSummary: taskSummary != nil,
+                                       hasSubagents: subagents?.isEmpty == false)
+            if visibleSubtitle != nil || (session.model != nil && chipHost == .ownRow) {
                 HStack(spacing: 8) {
                     if let subtitle = visibleSubtitle {
                         let isBranch = subtitleShowsBranch(for: session)
@@ -118,14 +120,15 @@ struct SessionCard: View {
             }
             if let summary = taskSummary {
                 TaskBlock(summary: summary, historyExpanded: $taskHistoryExpanded,
-                          modelChip: chipRidesTaskRow ? session.model : nil)
+                          modelChip: chipHost == .taskRow ? session.model : nil)
                     .padding(.leading, 18)
                     .padding(.top, 2)
             }
             if let list = subagents, !list.isEmpty {
                 // With an owning-task line above, the fan-out nests one level
                 // deeper — the agents belong to the task, not the session row.
-                SubagentRows(list: list, collapsed: $subagentsCollapsed)
+                SubagentRows(list: list, collapsed: $subagentsCollapsed,
+                             modelChip: chipHost == .subagentRow ? session.model : nil)
                     .padding(.leading, taskSummary == nil ? 18 : 30)
                     .padding(.top, 3)
             }
@@ -276,21 +279,30 @@ struct TaskBlock: View {
 struct SubagentRows: View {
     let list: SubagentList
     @Binding var collapsed: Bool
+    /// When set, the fan-out header row carries the session's model chip at
+    /// its trailing edge — the card had no subtitle or task row to host it.
+    var modelChip: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Button {
-                withAnimation(.easeOut(duration: 0.12)) { collapsed.toggle() }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: collapsed ? "chevron.right" : "chevron.down")
-                        .font(.system(size: 8, weight: .bold))
-                    Text(subagentChipText(list))
-                        .font(.system(size: 11))
+            HStack(spacing: 4) {
+                Button {
+                    withAnimation(.easeOut(duration: 0.12)) { collapsed.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+                            .font(.system(size: 8, weight: .bold))
+                        Text(subagentChipText(list))
+                            .font(.system(size: 11))
+                    }
+                    .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                if let model = modelChip {
+                    Spacer(minLength: 6)
+                    ModelChip(model: model)
+                }
             }
-            .buttonStyle(.plain)
 
             if !collapsed {
                 // Every agent is shown. A small fan-out lays out inline; beyond

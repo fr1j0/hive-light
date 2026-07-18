@@ -140,4 +140,19 @@ final class PanelModelTests: XCTestCase {
                                   total: 7, doneSubjects: ["1", "2", "3", "4", "5"])
         XCTAssertEqual(taskLineText(summary), "Task 6: AGENTS.md docs + quality gate · 5/7 tasks")
     }
+
+    func test_chipHostRow_ridesTheFirstAvailableRow() {
+        // The model chip never gets a row of its own while ANY row below the
+        // title exists to host it — a chip-only row reads as a gap in the card.
+        XCTAssertEqual(chipHostRow(hasSubtitle: true, hasTaskSummary: true, hasSubagents: true),
+                       .subtitleRow)
+        XCTAssertEqual(chipHostRow(hasSubtitle: false, hasTaskSummary: true, hasSubagents: true),
+                       .taskRow)
+        // The screenshot case (2026-07-18): grouped card, no subtitle, no task
+        // list — only the subagent fan-out. The chip rides its header row.
+        XCTAssertEqual(chipHostRow(hasSubtitle: false, hasTaskSummary: false, hasSubagents: true),
+                       .subagentRow)
+        XCTAssertEqual(chipHostRow(hasSubtitle: false, hasTaskSummary: false, hasSubagents: false),
+                       .ownRow)
+    }
 }
