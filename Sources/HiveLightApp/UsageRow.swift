@@ -16,13 +16,15 @@ enum UsagePalette {
     }
     static func color(forModel id: String) -> Color { color(for: modelColorSlot(id)) }
 
-    /// Capacity bars speak the context gauge's urgency language — never the
-    /// model palette (capacity, not identity).
-    static func urgency(_ level: ContextLevel) -> Color {
-        switch level {
-        case .ok: return Color.primary.opacity(0.75)
-        case .warm: return PanelPalette.orange
-        case .hot: return PanelPalette.red
+    /// The bottom strip's capacity bars: a fixed blue depth ladder by row —
+    /// calm identity per bucket, never urgency ("blue always", 2026-07-18
+    /// spec). The % text and countdown carry the alarm. UsageView colors its
+    /// own bars (its private levelColor); this ladder is the strip's voice.
+    static func bucketBlue(rowIndex: Int) -> Color {
+        switch rowIndex {
+        case 0: return Color(red: 0.561, green: 0.718, blue: 0.851)  // #8FB7D9
+        case 1: return Color(red: 0.353, green: 0.588, blue: 0.839)  // #5A96D6
+        default: return Color(red: 0.184, green: 0.435, blue: 0.769) // #2F6FC4
         }
     }
 
@@ -65,7 +67,9 @@ struct UsageRow: View {
                         topLine
                         if !burn.isEmpty { chipsFitted }
                     } else {
-                        ForEach(limits, id: \.label) { limitLine($0) }
+                        ForEach(Array(limits.enumerated()), id: \.element.label) {
+                            limitLine($1, rowIndex: $0)
+                        }
                     }
                 }
                 Image(systemName: "chevron.right")
@@ -134,7 +138,7 @@ struct UsageRow: View {
     }
 
     /// One real limit bucket: label · usage bar · % · its own reset clock.
-    private func limitLine(_ limit: PlanLimit) -> some View {
+    private func limitLine(_ limit: PlanLimit, rowIndex: Int) -> some View {
         HStack(spacing: 8) {
             Text(Self.compactLabel(limit.label))
                 .font(.system(size: 9, weight: .semibold))
@@ -146,7 +150,7 @@ struct UsageRow: View {
                     RoundedRectangle(cornerRadius: 2.5)
                         .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 2.5)
-                        .fill(UsagePalette.urgency(limitLevel(limit)))
+                        .fill(UsagePalette.bucketBlue(rowIndex: rowIndex))
                         .frame(width: geo.size.width * CGFloat(min(limit.percent, 100)) / 100)
                 }
             }
@@ -171,10 +175,13 @@ struct UsageRow: View {
 
     /// The row's label column. "Session" is Anthropic's name for the rolling
     /// 5h window — but THIS panel is full of Claude Code sessions, so the word
-    /// collides; "5-HOUR" says what it is. Weekly buckets spell out WEEK.
+    /// collides; "5-HOUR" says what it is. The weekly all-models bucket says
+    /// WEEK ("ALL" read as scope-without-horizon, 2026-07-19); scoped weekly
+    /// buckets keep their model name (FABLE).
     static func compactLabel(_ label: String) -> String {
-        label == "Session" ? "5-HOUR"
-            : label.replacingOccurrences(of: "Week · ", with: "").uppercased()
+        if label == "Session" { return "5-HOUR" }
+        if label == "Week · all" { return "WEEK" }
+        return label.replacingOccurrences(of: "Week · ", with: "").uppercased()
     }
 
     /// Per-bucket tooltip: what the bar measures and when it resets.

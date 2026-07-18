@@ -84,3 +84,10 @@ public func taskLineText(_ summary: TaskSummary) -> String {
 public func taskHistoryToggleText(_ summary: TaskSummary) -> String? {
     summary.doneSubjects.isEmpty ? nil : "earlier tasks"
 }
+
+/// Fill fraction for the task progress bar under the current-task row —
+/// done over total, clamped to 0...1 (0 when the list is empty).
+public func taskProgressFraction(_ summary: TaskSummary) -> Double {
+    guard summary.total > 0 else { return 0 }
+    return min(max(Double(summary.doneCount) / Double(summary.total), 0), 1)
+}
