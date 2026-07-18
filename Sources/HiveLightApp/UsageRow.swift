@@ -16,20 +16,10 @@ enum UsagePalette {
     }
     static func color(forModel id: String) -> Color { color(for: modelColorSlot(id)) }
 
-    /// Capacity bars speak the context gauge's urgency language — never the
-    /// model palette (capacity, not identity).
-    static func urgency(_ level: ContextLevel) -> Color {
-        switch level {
-        case .ok: return Color.primary.opacity(0.75)
-        case .warm: return PanelPalette.orange
-        case .hot: return PanelPalette.red
-        }
-    }
-
     /// The bottom strip's capacity bars: a fixed blue depth ladder by row —
     /// calm identity per bucket, never urgency ("blue always", 2026-07-18
-    /// spec). The % text and countdown carry the alarm. UsageView still
-    /// speaks urgency; this ladder is the strip's voice only.
+    /// spec). The % text and countdown carry the alarm. UsageView colors its
+    /// own bars (its private levelColor); this ladder is the strip's voice.
     static func bucketBlue(rowIndex: Int) -> Color {
         switch rowIndex {
         case 0: return Color(red: 0.561, green: 0.718, blue: 0.851)  // #8FB7D9

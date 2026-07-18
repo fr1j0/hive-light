@@ -47,9 +47,11 @@ projection, no row changes.
 - The bars never change hue with utilization ("blue always" — user's
   explicit call, alarm dropped knowingly). `%` text and countdown are
   untouched and now carry all urgency.
-- `UsagePalette.urgency(_:)` itself stays — `UsageView` (the
-  click-through) keeps its current coloring; restyling it is a separate
-  decision out of scope here.
+- `UsagePalette.urgency(_:)` is deleted with its last call site —
+  final review found `UsageView` never used it (it colors bars via its
+  own private `levelColor`), so it would survive only as dead code with
+  a now-false comment. `UsageView`'s coloring is untouched; restyling it
+  is a separate decision out of scope here.
 
 ## Code changes
 
