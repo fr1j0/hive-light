@@ -175,10 +175,13 @@ struct UsageRow: View {
 
     /// The row's label column. "Session" is Anthropic's name for the rolling
     /// 5h window — but THIS panel is full of Claude Code sessions, so the word
-    /// collides; "5-HOUR" says what it is. Weekly buckets spell out WEEK.
+    /// collides; "5-HOUR" says what it is. The weekly all-models bucket says
+    /// WEEK ("ALL" read as scope-without-horizon, 2026-07-19); scoped weekly
+    /// buckets keep their model name (FABLE).
     static func compactLabel(_ label: String) -> String {
-        label == "Session" ? "5-HOUR"
-            : label.replacingOccurrences(of: "Week · ", with: "").uppercased()
+        if label == "Session" { return "5-HOUR" }
+        if label == "Week · all" { return "WEEK" }
+        return label.replacingOccurrences(of: "Week · ", with: "").uppercased()
     }
 
     /// Per-bucket tooltip: what the bar measures and when it resets.

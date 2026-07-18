@@ -62,8 +62,14 @@ projection, no row changes.
   `UsagePalette`; `limitLine` takes its row index and uses it.
 - Tests: `taskProgressFraction` cases (0 done, partial, all done).
 
+### Label amendment (2026-07-19)
+
+- The weekly all-models bucket relabels `ALL` → `WEEK` ("ALL" read as
+  scope-without-horizon; "WEEK" names the clock). `5-HOUR` stays — "NOW"
+  was rejected as readable as instantaneous usage. `FABLE` unchanged.
+
 ## Out of scope
 
 - UsageView bar colors.
-- Any change to bucket labels, ordering, or the fetch.
+- Any other change to bucket labels, ordering, or the fetch.
 - The local-fallback microbar (model-identity colors) — untouched.
