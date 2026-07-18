@@ -152,24 +152,24 @@ struct SessionCard: View {
     }
 }
 
-/// The owning-task block: an optional "+N earlier" disclosure that unfolds
-/// the full completed history chronologically, the two most recent completed
-/// tasks struck in the fan-out's settled treatment, then the current task at
-/// full text strength behind the terminal's ■ marker.
+/// The owning-task block: an optional count-free "earlier tasks" disclosure
+/// that hides the full completed history (struck rows, chronological, long
+/// histories scroll internally), then the current task at full text strength
+/// behind the terminal's ■ marker.
 struct TaskBlock: View {
     let summary: TaskSummary
     @Binding var historyExpanded: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let overflow = taskHistoryOverflowText(summary) {
+            if let toggle = taskHistoryToggleText(summary) {
                 Button {
                     withAnimation(.easeOut(duration: 0.12)) { historyExpanded.toggle() }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: historyExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 8, weight: .bold))
-                        Text(overflow)
+                        Text(toggle)
                             .font(.system(size: 10.5))
                     }
                     .foregroundStyle(.tertiary)
@@ -177,19 +177,17 @@ struct TaskBlock: View {
                 .buttonStyle(.plain)
 
                 if historyExpanded {
-                    // Chronological unfold: earlier tasks appear above the
-                    // always-visible recent two. Long histories scroll
-                    // internally, same cap as the fan-out block.
-                    let earlier = summary.doneSubjects.dropLast(taskHistoryVisibleCount)
-                    if earlier.count > Self.maxInlineRows {
-                        ScrollView { historyRows(Array(earlier)) }
+                    // Chronological unfold of the full history. Long
+                    // histories scroll internally, same cap as the fan-out
+                    // block.
+                    if summary.doneSubjects.count > Self.maxInlineRows {
+                        ScrollView { historyRows(summary.doneSubjects) }
                             .frame(height: Self.scrollBlockHeight)
                     } else {
-                        historyRows(Array(earlier))
+                        historyRows(summary.doneSubjects)
                     }
                 }
             }
-            historyRows(summary.doneSubjects.suffix(taskHistoryVisibleCount).map { $0 })
             HStack(spacing: 5) {
                 Rectangle()
                     .fill(PanelPalette.color(for: .running))

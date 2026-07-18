@@ -63,9 +63,9 @@ Click the icon for the full picture:
   elapsed-state timer, and — when a session is blocked — the actual question
   or permission request it's waiting on.
 - Running task-driven sessions show what they're on: the current tracker task
-  with progress (`Task 6: docs + quality gate · 5/7 tasks`), recently
-  completed tasks struck through, and a `+N earlier` disclosure that unfolds
-  the full history.
+  with progress (`Task 6: docs + quality gate · 5/7 tasks`), plus an
+  `earlier tasks` disclosure that unfolds the completed history, struck
+  through.
 - Running sessions with parallel subagents show them as collapsible rows
   inside the card, nested under the task that owns them.
 - Click a card to jump to that session's terminal.

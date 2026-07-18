@@ -1,12 +1,12 @@
 import Foundation
 
 /// The session's task-list context: the in-progress task, the full completed
-/// history (struck rows + expandable "+N earlier" disclosure), and the total.
+/// history (struck rows under an "earlier tasks" disclosure), and the total.
 public struct TaskSummary: Equatable, Sendable {
     public let inProgressSubject: String   // truncated to 40 chars
     public let total: Int
-    /// Every completed subject, ascending completion order — the card shows
-    /// the last two and hides the rest behind the history disclosure.
+    /// Every completed subject, ascending completion order — the card hides
+    /// them all behind the earlier-tasks disclosure.
     public let doneSubjects: [String]
 
     public var doneCount: Int { doneSubjects.count }
