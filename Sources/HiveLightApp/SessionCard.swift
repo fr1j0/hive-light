@@ -201,6 +201,22 @@ struct TaskBlock: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
+            // Progress echo of the "· done/total" count — shape channel only,
+            // no number (the text already says it once).
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.primary.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(PanelPalette.orange.opacity(0.75))
+                        .frame(width: geo.size.width * taskProgressFraction(summary))
+                }
+            }
+            // Greedy width: a GeometryReader's ideal width is ~10pt and this
+            // panel sizes to ideals — without maxWidth the bar collapses.
+            .frame(maxWidth: .infinity)
+            .frame(height: 2)
+            .padding(.leading, 12)
         }
     }
 

@@ -110,6 +110,16 @@ final class PanelModelTests: XCTestCase {
         XCTAssertNil(taskHistoryToggleText(none))
     }
 
+    func test_taskProgressFraction_clampedRatio() {
+        XCTAssertEqual(taskProgressFraction(TaskSummary(
+            inProgressSubject: "n", total: 8,
+            doneSubjects: ["1", "2", "3", "4"])), 0.5)
+        XCTAssertEqual(taskProgressFraction(TaskSummary(
+            inProgressSubject: "n", total: 3, doneSubjects: [])), 0)
+        XCTAssertEqual(taskProgressFraction(TaskSummary(
+            inProgressSubject: "n", total: 0, doneSubjects: [])), 0)
+    }
+
     func test_taskLineText_subjectDotCounts() {
         // "tasks" suffix disambiguates the count from the subagent block's
         // "X of N done" directly below it.
