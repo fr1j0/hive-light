@@ -85,16 +85,17 @@ struct SessionCard: View {
                         .frame(width: 28, alignment: .trailing)
                 }
             }
-            // The chip's home is this second row, trailing edge — and the row
-            // now exists whenever the model is known, so grouped running cards
-            // (whose branch subtitle folds into the title) keep their chip
-            // instead of losing the whole line.
+            // Model chip (#105): trailing edge of the row below the title.
+            // It rides the subtitle when one shows, else the current-task
+            // row, else a row of its own — never an empty line of dead
+            // space, never lost with a suppressed subtitle (grouped+running).
             let visibleSubtitle: String? = {
                 guard let s = cardSubtitle(for: session, errorReason: errorReason),
                       !(grouped && subtitleShowsBranch(for: session)) else { return nil }
                 return s
             }()
-            if visibleSubtitle != nil || session.model != nil {
+            let chipRidesTaskRow = visibleSubtitle == nil && taskSummary != nil
+            if visibleSubtitle != nil || (session.model != nil && !chipRidesTaskRow) {
                 HStack(spacing: 8) {
                     if let subtitle = visibleSubtitle {
                         let isBranch = subtitleShowsBranch(for: session)
@@ -110,24 +111,14 @@ struct SessionCard: View {
                     }
                     if let model = session.model {
                         Spacer(minLength: 6)
-                        // Model chip (#105): trailing edge, never compresses —
-                        // the subtitle text truncates instead.
-                        Text(shortModelName(model).uppercased())
-                            .font(.system(size: 9, weight: .semibold))
-                            .kerning(0.5)
-                            .foregroundStyle(.tertiary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.primary.opacity(0.09)))
-                            .layoutPriority(1)
-                            .help(model)
+                        ModelChip(model: model)
                     }
                 }
                 .padding(.leading, 18)
             }
             if let summary = taskSummary {
-                TaskBlock(summary: summary, historyExpanded: $taskHistoryExpanded)
+                TaskBlock(summary: summary, historyExpanded: $taskHistoryExpanded,
+                          modelChip: chipRidesTaskRow ? session.model : nil)
                     .padding(.leading, 18)
                     .padding(.top, 2)
             }
@@ -162,6 +153,25 @@ struct SessionCard: View {
     }
 }
 
+/// The model chip (#105): 9pt pill at a row's trailing edge, never
+/// compresses — whatever shares the row truncates instead.
+struct ModelChip: View {
+    let model: String
+
+    var body: some View {
+        Text(shortModelName(model).uppercased())
+            .font(.system(size: 9, weight: .semibold))
+            .kerning(0.5)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(RoundedRectangle(cornerRadius: 4)
+                .fill(Color.primary.opacity(0.09)))
+            .layoutPriority(1)
+            .help(model)
+    }
+}
+
 /// The owning-task block: an optional count-free "earlier tasks" disclosure
 /// that hides the full completed history (struck rows, chronological, long
 /// histories scroll internally), then the current task at full text strength
@@ -169,6 +179,9 @@ struct SessionCard: View {
 struct TaskBlock: View {
     let summary: TaskSummary
     @Binding var historyExpanded: Bool
+    /// When set, the current-task row carries the session's model chip at its
+    /// trailing edge — the card had no subtitle row to host it.
+    var modelChip: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -210,6 +223,10 @@ struct TaskBlock: View {
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                if let model = modelChip {
+                    Spacer(minLength: 6)
+                    ModelChip(model: model)
+                }
             }
             // Progress echo of the "· done/total" count — shape channel only,
             // no number (the text already says it once).
