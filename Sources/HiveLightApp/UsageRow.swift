@@ -26,6 +26,18 @@ enum UsagePalette {
         }
     }
 
+    /// The bottom strip's capacity bars: a fixed blue depth ladder by row —
+    /// calm identity per bucket, never urgency ("blue always", 2026-07-18
+    /// spec). The % text and countdown carry the alarm. UsageView still
+    /// speaks urgency; this ladder is the strip's voice only.
+    static func bucketBlue(rowIndex: Int) -> Color {
+        switch rowIndex {
+        case 0: return Color(red: 0.561, green: 0.718, blue: 0.851)  // #8FB7D9
+        case 1: return Color(red: 0.353, green: 0.588, blue: 0.839)  // #5A96D6
+        default: return Color(red: 0.184, green: 0.435, blue: 0.769) // #2F6FC4
+        }
+    }
+
     /// Chip label: family name for known models, short id for others.
     static func chipName(_ id: String) -> String {
         switch modelColorSlot(id) {
@@ -65,7 +77,9 @@ struct UsageRow: View {
                         topLine
                         if !burn.isEmpty { chipsFitted }
                     } else {
-                        ForEach(limits, id: \.label) { limitLine($0) }
+                        ForEach(Array(limits.enumerated()), id: \.element.label) {
+                            limitLine($1, rowIndex: $0)
+                        }
                     }
                 }
                 Image(systemName: "chevron.right")
@@ -134,7 +148,7 @@ struct UsageRow: View {
     }
 
     /// One real limit bucket: label · usage bar · % · its own reset clock.
-    private func limitLine(_ limit: PlanLimit) -> some View {
+    private func limitLine(_ limit: PlanLimit, rowIndex: Int) -> some View {
         HStack(spacing: 8) {
             Text(Self.compactLabel(limit.label))
                 .font(.system(size: 9, weight: .semibold))
@@ -146,7 +160,7 @@ struct UsageRow: View {
                     RoundedRectangle(cornerRadius: 2.5)
                         .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 2.5)
-                        .fill(UsagePalette.urgency(limitLevel(limit)))
+                        .fill(UsagePalette.bucketBlue(rowIndex: rowIndex))
                         .frame(width: geo.size.width * CGFloat(min(limit.percent, 100)) / 100)
                 }
             }
