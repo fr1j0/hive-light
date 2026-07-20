@@ -59,7 +59,9 @@ struct PanelContent: View {
             } else if showingUsage {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     UsageView(snapshot: usage.snapshot,
-                              limits: watcher.showPlanLimits ? limitsFetcher.limits : [],
+                              limits: watcher.showPlanLimits
+                                ? visibleLimits(limitsFetcher.limits, overrides: watcher.usageModelOverrides)
+                                : [],
                               now: context.date) { showingUsage = false }
                 }
             } else {
