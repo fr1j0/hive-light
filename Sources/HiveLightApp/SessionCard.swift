@@ -85,52 +85,57 @@ struct SessionCard: View {
                         .frame(width: 28, alignment: .trailing)
                 }
             }
-            // Model chip (#105): trailing edge of the row below the title.
-            // It rides the subtitle when one shows, else the current-task
-            // row, else a row of its own — never an empty line of dead
-            // space, never lost with a suppressed subtitle (grouped+running).
             let visibleSubtitle: String? = {
                 guard let s = cardSubtitle(for: session, errorReason: errorReason),
                       !(grouped && subtitleShowsBranch(for: session)) else { return nil }
+                // No bare status words on this line — the dot already carries
+                // status. Keep only informative subtitles (questions, error
+                // reasons, branches); drop plain "running"/"idle"/etc.
+                if s == friendlyStatusLabel(for: session.status) { return nil }
                 return s
             }()
-            let chipHost = chipHostRow(hasSubtitle: visibleSubtitle != nil,
-                                       hasTaskSummary: taskSummary != nil,
-                                       hasSubagents: subagents?.isEmpty == false)
-            if visibleSubtitle != nil || (session.model != nil && chipHost == .ownRow) {
-                HStack(spacing: 8) {
-                    if let subtitle = visibleSubtitle {
-                        let isBranch = subtitleShowsBranch(for: session)
-                        Text(subtitle)
-                            .font(.system(size: isBranch ? 11 : 12))
-                            .foregroundStyle(session.status == .error
-                                             ? AnyShapeStyle(PanelPalette.red)
-                                             : isBranch
-                                             ? AnyShapeStyle(PanelPalette.branchAmber)
-                                             : AnyShapeStyle(.secondary))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    if let model = session.model {
-                        Spacer(minLength: 6)
-                        ModelChip(model: model)
-                    }
-                }
-                .padding(.leading, 18)
+            if let subtitle = visibleSubtitle {
+                let isBranch = subtitleShowsBranch(for: session)
+                Text(subtitle)
+                    .font(.system(size: isBranch ? 11 : 12))
+                    .foregroundStyle(session.status == .error
+                                     ? AnyShapeStyle(PanelPalette.red)
+                                     : isBranch
+                                     ? AnyShapeStyle(PanelPalette.branchAmber)
+                                     : AnyShapeStyle(.secondary))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.leading, 18)
             }
             if let summary = taskSummary {
-                TaskBlock(summary: summary, historyExpanded: $taskHistoryExpanded,
-                          modelChip: chipHost == .taskRow ? session.model : nil)
+                TaskBlock(summary: summary, historyExpanded: $taskHistoryExpanded)
                     .padding(.leading, 18)
                     .padding(.top, 2)
             }
             if let list = subagents, !list.isEmpty {
                 // With an owning-task line above, the fan-out nests one level
                 // deeper — the agents belong to the task, not the session row.
-                SubagentRows(list: list, collapsed: $subagentsCollapsed,
-                             modelChip: chipHost == .subagentRow ? session.model : nil)
+                SubagentRows(list: list, collapsed: $subagentsCollapsed)
                     .padding(.leading, taskSummary == nil ? 18 : 30)
                     .padding(.top, 3)
+            }
+        }
+        // Reserve room for the chip overlay's fixed slot so a single-line card
+        // (no tasks/subagents) is sized to hold it, rather than the chip
+        // reading as a tacked-on second line.
+        .frame(minHeight: 34, alignment: .top)
+        // Model chip (#105): pinned top-right, directly under the gauge/timer,
+        // as an OVERLAY — it takes no row in the layout, so tasks and subagents
+        // stack as if it weren't there. It never moves down with content and
+        // never leaves an empty row. Position is sacred.
+        //
+        // ⚠️ LOCKED 2026-07-20 by explicit user decision after a long, painful
+        // iteration. DO NOT move the chip into the flow, onto the task/subtitle
+        // row, or anywhere else. The overlay IS the design. Leave it alone.
+        .overlay(alignment: .topTrailing) {
+            if let model = session.model {
+                ModelChip(model: model)
+                    .padding(.top, 19)
             }
         }
         .padding(.horizontal, 10)
@@ -182,9 +187,6 @@ struct ModelChip: View {
 struct TaskBlock: View {
     let summary: TaskSummary
     @Binding var historyExpanded: Bool
-    /// When set, the current-task row carries the session's model chip at its
-    /// trailing edge — the card had no subtitle row to host it.
-    var modelChip: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -226,10 +228,6 @@ struct TaskBlock: View {
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.tail)
-                if let model = modelChip {
-                    Spacer(minLength: 6)
-                    ModelChip(model: model)
-                }
             }
             // Progress echo of the "· done/total" count — shape channel only,
             // no number (the text already says it once).
@@ -279,9 +277,6 @@ struct TaskBlock: View {
 struct SubagentRows: View {
     let list: SubagentList
     @Binding var collapsed: Bool
-    /// When set, the fan-out header row carries the session's model chip at
-    /// its trailing edge — the card had no subtitle or task row to host it.
-    var modelChip: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -298,10 +293,6 @@ struct SubagentRows: View {
                     .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                if let model = modelChip {
-                    Spacer(minLength: 6)
-                    ModelChip(model: model)
-                }
             }
 
             if !collapsed {
