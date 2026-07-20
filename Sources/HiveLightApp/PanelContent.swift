@@ -10,10 +10,6 @@ struct PanelContent: View {
     @ObservedObject var watcher: SessionWatcher
     @State private var showingSettings = false
     @State private var showingUsage = false
-    /// Project groups the user has folded, by groupKey. In-memory for the app
-    /// run (resets on relaunch, like the subagent collapse) — a folded group
-    /// keeps a one-line summary so you still see it's alive.
-    @State private var collapsedGroups: Set<String> = []
     @StateObject private var usage = UsageScanner()
     @StateObject private var limitsFetcher = LimitsFetcher()
     // Past the panelScrollThreshold weight the list scrolls at a height that
@@ -34,7 +30,7 @@ struct PanelContent: View {
         var sessionCount = 0, subCells = 0, taskCells = 0, headerCells = 0
         for block in blocks {
             if grouped { headerCells += 1 }
-            if grouped, let key = block.first?.groupKey, collapsedGroups.contains(key) {
+            if grouped, let key = block.first?.groupKey, watcher.collapsedGroups.contains(key) {
                 continue   // folded: header only, cards hidden
             }
             sessionCount += block.count
@@ -191,17 +187,20 @@ struct PanelContent: View {
                 // view state on expiry — the very churn this feature kills).
                 ForEach(sessionBlocks(watcher.sessions), id: \.first!.groupKey) { block in
                     let key = block.first!.groupKey
-                    let collapsed = collapsedGroups.contains(key)
+                    let collapsed = watcher.collapsedGroups.contains(key)
                     VStack(alignment: .leading, spacing: 4) {
                         // The header carries the project name (title color) and
                         // is the fold control — a chevron toggles the group.
                         // Folded, it keeps a status dot + freshest timer so the
                         // project still reads as alive.
                         Button {
-                            withAnimation(.easeOut(duration: 0.12)) {
-                                if collapsed { collapsedGroups.remove(key) }
-                                else { collapsedGroups.insert(key) }
-                            }
+                            // No animation: the panel window re-measures its
+                            // ideal height on this change, and animating a whole
+                            // group in/out races that re-measure — transitioning
+                            // cards overlap their neighbors. Instant fold keeps
+                            // the layout consistent every frame.
+                            if collapsed { watcher.collapsedGroups.remove(key) }
+                            else { watcher.collapsedGroups.insert(key) }
                         } label: {
                             HStack(spacing: 6) {
                                 // Project name leads at full prominence — the
