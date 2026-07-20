@@ -88,6 +88,10 @@ struct SessionCard: View {
             let visibleSubtitle: String? = {
                 guard let s = cardSubtitle(for: session, errorReason: errorReason),
                       !(grouped && subtitleShowsBranch(for: session)) else { return nil }
+                // No bare status words on this line — the dot already carries
+                // status. Keep only informative subtitles (questions, error
+                // reasons, branches); drop plain "running"/"idle"/etc.
+                if s == friendlyStatusLabel(for: session.status) { return nil }
                 return s
             }()
             if let subtitle = visibleSubtitle {
