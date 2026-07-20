@@ -299,4 +299,17 @@ final class ApplyHookTests: XCTestCase {
                       to: store, now: now.addingTimeInterval(1), transcriptJSONL: opusEntry)
         XCTAssertEqual(try store.loadAll().first?.model, "claude-opus-4-8")
     }
+
+    /// Mid-turn freshness: a PostToolUse carrying a transcript refreshes the
+    /// model, so a switch made during a long agentic turn surfaces before the
+    /// turn's Stop instead of freezing on the old model for the whole turn.
+    func test_applyHook_postToolUseWithTranscript_refreshesModelMidTurn() throws {
+        let store = tempStore()
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "UserPromptSubmit", cwd: "/x/p", message: nil),
+                      to: store, now: now, transcriptJSONL: modelEntry)
+        XCTAssertEqual(try store.loadAll().first?.model, "claude-fable-5")
+        try applyHook(HookPayload(sessionID: "s1", hookEventName: "PostToolUse", cwd: "/x/p", message: nil),
+                      to: store, now: now.addingTimeInterval(1), transcriptJSONL: opusEntry)
+        XCTAssertEqual(try store.loadAll().first?.model, "claude-opus-4-8")
+    }
 }

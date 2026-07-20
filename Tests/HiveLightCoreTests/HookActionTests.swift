@@ -92,9 +92,13 @@ final class HookActionTests: XCTestCase {
         XCTAssertFalse(eventCarriesTranscript("PreToolUse"))
     }
 
-    func test_postToolUse_doesNotCarryTranscript() {
-        // Same per-tool-call cadence as PreToolUse — too expensive to read.
-        XCTAssertFalse(eventCarriesTranscript("PostToolUse"))
+    func test_postToolUse_carriesTranscript() {
+        // PostToolUse re-reads the transcript so the model chip and context
+        // gauge stay fresh MID-TURN — a model switch (or a big context jump)
+        // surfaces within a tool call or two instead of freezing until the
+        // turn's Stop. Affordable now: the read is 64KB-tail-capped (#174),
+        // and the hook process already spawns on PostToolUse regardless.
+        XCTAssertTrue(eventCarriesTranscript("PostToolUse"))
     }
 
     func test_notification_doesNotCarryTranscript() {
