@@ -52,11 +52,16 @@ struct PanelContent: View {
     var body: some View {
         Group {
             if showingSettings {
-                SettingsPane(watcher: watcher) { showingSettings = false }
+                SettingsPane(watcher: watcher,
+                             perModelBuckets: limitsFetcher.limits.filter(isPerModelLimit)) {
+                    showingSettings = false
+                }
             } else if showingUsage {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     UsageView(snapshot: usage.snapshot,
-                              limits: watcher.showPlanLimits ? limitsFetcher.limits : [],
+                              limits: watcher.showPlanLimits
+                                ? visibleLimits(limitsFetcher.limits, overrides: watcher.usageModelOverrides)
+                                : [],
                               now: context.date) { showingUsage = false }
                 }
             } else {
@@ -129,7 +134,9 @@ struct PanelContent: View {
             // Stats strip (#83): the usage glance docks between the list and footer.
             if usageRowVisible {
                 Divider()
-                let limits = watcher.showPlanLimits ? limitsFetcher.limits : []
+                let limits = watcher.showPlanLimits
+                    ? visibleLimits(limitsFetcher.limits, overrides: watcher.usageModelOverrides)
+                    : []
                 UsageRow(burn: usage.snapshot.windowBurn,
                          limits: limits,
                          windowEnd: usage.snapshot.windowEnd,

@@ -34,6 +34,14 @@ final class SessionWatcher: ObservableObject {
             UserDefaults.standard.set(showPlanLimits, forKey: Self.showPlanLimitsKey)
         }
     }
+    /// Per-model usage-row overrides, keyed by model display name: true = show,
+    /// false = hide. A name absent here uses the id-based default (off-plan
+    /// leftovers auto-hide). Persisted so choices survive relaunch.
+    @Published var usageModelOverrides: [String: Bool] {
+        didSet {
+            UserDefaults.standard.set(usageModelOverrides, forKey: Self.usageModelOverridesKey)
+        }
+    }
     /// Panel row order (stable-session-order spec): grouped by repo (default)
     /// or pure open-order. Re-sorts immediately on change.
     @Published var sessionOrder: SessionOrder {
@@ -59,6 +67,7 @@ final class SessionWatcher: ObservableObject {
     private static let showSubagentsKey = "showSubagents"
     private static let showUsageStatsKey = "showUsageStats"
     private static let showPlanLimitsKey = "showPlanLimits"
+    private static let usageModelOverridesKey = "usageModelOverrides"
     private static let sessionOrderKey = "sessionOrder"
     private static let notifyKey = "notifyOnNeedsYou"
     private let notifier = SessionNotifier()
@@ -86,6 +95,8 @@ final class SessionWatcher: ObservableObject {
         self.showSubagents = UserDefaults.standard.bool(forKey: Self.showSubagentsKey)
         self.showUsageStats = UserDefaults.standard.bool(forKey: Self.showUsageStatsKey)
         self.showPlanLimits = UserDefaults.standard.bool(forKey: Self.showPlanLimitsKey)
+        self.usageModelOverrides =
+            (UserDefaults.standard.dictionary(forKey: Self.usageModelOverridesKey) as? [String: Bool]) ?? [:]
         self.sessionOrder = UserDefaults.standard.string(forKey: Self.sessionOrderKey)
             .flatMap(SessionOrder.init(rawValue:)) ?? .project
         self.notifyOnNeedsYou = UserDefaults.standard.bool(forKey: Self.notifyKey)

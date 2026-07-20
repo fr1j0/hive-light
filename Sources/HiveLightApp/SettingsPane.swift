@@ -7,6 +7,9 @@ import HiveLightCore
 /// (5% primary fill, 8pt radius) with monochrome panel-native controls.
 struct SettingsPane: View {
     @ObservedObject var watcher: SessionWatcher
+    /// The per-model (weekly_scoped) buckets currently reported by Anthropic —
+    /// the self-populating source for the per-model toggle list.
+    var perModelBuckets: [PlanLimit] = []
     let onBack: () -> Void
 
     /// Attributes-only Keychain check (no consent prompt) — gates the
@@ -72,6 +75,30 @@ struct SettingsPane: View {
                 .opacity(hasOAuthLogin && watcher.showUsageStats ? 1 : 0.4)
                 caption(planLimitsCaption)
                     .padding(.leading, 12)
+
+                // Per-model rows: one switch per model Anthropic reports a
+                // weekly bucket for. Off-plan leftovers (no model id) default
+                // off; the switch is the override. Only shown when there ARE
+                // per-model buckets and limits are actually being fetched.
+                if !perModelBuckets.isEmpty && watcher.showPlanLimits && hasOAuthLogin {
+                    insetDivider
+                    row("Per-model rows") { EmptyView() }
+                        .padding(.leading, 12)
+                    ForEach(perModelBuckets, id: \.label) { bucket in
+                        if let name = bucket.scopeModelName {
+                            row(name) {
+                                MiniSwitch(isOn: Binding(
+                                    get: { watcher.usageModelOverrides[name]
+                                            ?? perModelLimitDefaultVisible(bucket) },
+                                    set: { watcher.usageModelOverrides[name] = $0 }),
+                                    label: name)
+                            }
+                            .padding(.leading, 24)
+                        }
+                    }
+                    caption("A model with its own weekly bucket. Ones that left your plan hide by default — flip any on or off.")
+                        .padding(.leading, 12)
+                }
             }
 
             if watcher.launchAtLoginAvailable || watcher.notificationsAvailable {
