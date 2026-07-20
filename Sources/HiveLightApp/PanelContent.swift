@@ -203,16 +203,16 @@ struct PanelContent: View {
                                 else { collapsedGroups.insert(key) }
                             }
                         } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: collapsed ? "chevron.right" : "chevron.down")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(.secondary)
+                            HStack(spacing: 6) {
+                                // Project name leads at full prominence — the
+                                // fold chevron trails, quiet, so it never
+                                // competes with the header it controls.
                                 Text(blockTitle(block).uppercased())
                                     .font(.system(size: 9, weight: .semibold))
                                     .kerning(1)
                                     .foregroundStyle(.primary)
+                                Spacer(minLength: 8)
                                 if collapsed {
-                                    Spacer(minLength: 8)
                                     Circle().fill(groupStatusColor(block))
                                         .frame(width: 7, height: 7)
                                     Text(groupNewestTimer(block, now: now))
@@ -220,9 +220,13 @@ struct PanelContent: View {
                                         .monospacedDigit()
                                         .foregroundStyle(.secondary)
                                 }
+                                Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
                             .padding(.top, 4)
                             .padding(.leading, 4)
+                            .padding(.trailing, 4)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
