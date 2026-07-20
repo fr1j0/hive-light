@@ -120,6 +120,10 @@ struct SessionCard: View {
                     .padding(.top, 3)
             }
         }
+        // Reserve room for the chip overlay's fixed slot so a single-line card
+        // (no tasks/subagents) is sized to hold it, rather than the chip
+        // reading as a tacked-on second line.
+        .frame(minHeight: 34, alignment: .top)
         // Model chip (#105): pinned top-right, directly under the gauge/timer,
         // as an OVERLAY — it takes no row in the layout, so tasks and subagents
         // stack as if it weren't there. It never moves down with content and
