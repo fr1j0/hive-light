@@ -23,6 +23,44 @@ final class PlanLimitsTests: XCTestCase {
         XCTAssertEqual(limits[2].percent, 53)
     }
 
+    func test_decodesScopeModel_nameAndNullId() {
+        let limits = planLimits(fromJSON: realShape)
+        XCTAssertNil(limits[0].scopeModelName)              // session: no scope
+        XCTAssertNil(limits[1].scopeModelName)              // weekly_all: no scope
+        XCTAssertEqual(limits[2].scopeModelName, "Fable")   // per-model bucket
+        XCTAssertNil(limits[2].scopeModelID)                // server withheld the id
+    }
+
+    func test_perModelDefaultVisibility_idNullHidesFableIdPresentShows() {
+        // Off-plan leftover (id null) → hidden by default; entitled scoped
+        // model (id present) → shown.
+        let fable = PlanLimit(kind: "weekly_scoped", label: "Week · Fable", percent: 56,
+                              severity: "normal", resetsAt: nil,
+                              scopeModelName: "Fable", scopeModelID: nil)
+        let entitled = PlanLimit(kind: "weekly_scoped", label: "Week · Opus", percent: 20,
+                                 severity: "normal", resetsAt: nil,
+                                 scopeModelName: "Opus", scopeModelID: "claude-opus-4-8")
+        let session = PlanLimit(kind: "session", label: "Session", percent: 9,
+                                severity: "normal", resetsAt: nil)
+        XCTAssertTrue(isPerModelLimit(fable))
+        XCTAssertFalse(isPerModelLimit(session))
+        XCTAssertFalse(perModelLimitDefaultVisible(fable))
+        XCTAssertTrue(perModelLimitDefaultVisible(entitled))
+    }
+
+    func test_visibleLimits_autoHidesNullIdUnlessOverridden() {
+        let limits = planLimits(fromJSON: realShape)   // session, weekly_all, Fable(id null)
+        // No overrides: Fable auto-hidden, universal buckets kept.
+        let auto = visibleLimits(limits, overrides: [:])
+        XCTAssertEqual(auto.map(\.label), ["Session", "Week · all"])
+        // User re-shows Fable.
+        let shown = visibleLimits(limits, overrides: ["Fable": true])
+        XCTAssertEqual(shown.map(\.label), ["Session", "Week · all", "Week · Fable"])
+        // User hides an otherwise-visible model → universal buckets still pass.
+        let hiddenOverride = visibleLimits(limits, overrides: ["Fable": false])
+        XCTAssertEqual(hiddenOverride.count, 2)
+    }
+
     func test_unknownKind_keptWithKindAsLabel() {
         let json = Data(#"{"limits":[{"kind":"monthly_beta","percent":10,"severity":"normal"}]}"#.utf8)
         let limits = planLimits(fromJSON: json)
