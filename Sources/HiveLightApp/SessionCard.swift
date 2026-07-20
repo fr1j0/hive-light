@@ -24,6 +24,13 @@ enum PanelPalette {
         case .idle: return green
         }
     }
+
+    /// The session card's opaque surface (option C) — a dark neutral with a
+    /// slight cool bias, one step lighter than the panel; the hover variant
+    /// lifts it once more. Opaque so a card reads the same over any window
+    /// bleeding through the translucent panel.
+    static let cardSurface = Color(red: 0.141, green: 0.153, blue: 0.173)      // #24272C
+    static let cardSurfaceHover = Color(red: 0.173, green: 0.188, blue: 0.212) // #2C3036
 }
 
 /// One session in the panel: a clickable card (status dot, title, live
@@ -140,9 +147,13 @@ struct SessionCard: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
+        // Solid raised card (option C): an OPAQUE dark surface, a touch lighter
+        // than the panel, so it reads identically over any window behind the
+        // translucent panel — a faint white tint only lightened and washed out
+        // over bright backgrounds. Hover brightens it one step.
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(hovering ? 0.10 : 0.05))
+                .fill(hovering ? PanelPalette.cardSurfaceHover : PanelPalette.cardSurface)
         )
         // The whole card is the focus target — hover implies clickability;
         // the inner disclosure Button still wins clicks on its own area.
