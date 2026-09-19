@@ -173,7 +173,11 @@ struct PanelContent: View {
 
     @ViewBuilder
     private func sessionRows(now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        // Spacing hierarchy: project blocks sit 12pt apart so a boundary reads
+        // as a boundary; cards within a block stay a snug 5pt (set on the block
+        // stack below). Ungrouped mode has no blocks, so this outer stack owns
+        // the within-list gap directly — 5pt there too.
+        VStack(alignment: .leading, spacing: watcher.sessionOrder == .project ? 12 : 5) {
             if watcher.sessions.isEmpty {
                 // The asleep header carries the empty-state message.
                 EmptyView()
@@ -188,7 +192,7 @@ struct PanelContent: View {
                 ForEach(sessionBlocks(watcher.sessions), id: \.first!.groupKey) { block in
                     let key = block.first!.groupKey
                     let collapsed = watcher.collapsedGroups.contains(key)
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 5) {
                         // The header carries the project name (title color) and
                         // is the fold control — a chevron toggles the group.
                         // Folded, it keeps a status dot + freshest timer so the
@@ -214,10 +218,18 @@ struct PanelContent: View {
                                 if collapsed {
                                     Circle().fill(groupStatusColor(block))
                                         .frame(width: 7, height: 7)
+                                    // Match the open card's timer treatment so
+                                    // folding no longer resizes or re-weights
+                                    // the time: 11pt secondary mono in the same
+                                    // 28pt trailing slot. The header chevron owns
+                                    // the far-right edge, so the folded time sits
+                                    // one chevron inboard of a card's right edge —
+                                    // but the size/weight jump is gone.
                                     Text(groupNewestTimer(block, now: now))
-                                        .font(.system(size: 10))
+                                        .font(.system(size: 11))
                                         .monospacedDigit()
                                         .foregroundStyle(.secondary)
+                                        .frame(width: 28, alignment: .trailing)
                                 }
                                 Image(systemName: collapsed ? "chevron.right" : "chevron.down")
                                     .font(.system(size: 8, weight: .bold))
