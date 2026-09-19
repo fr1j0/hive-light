@@ -131,6 +131,12 @@ struct SessionCard: View {
         // (no tasks/subagents) is sized to hold it, rather than the chip
         // reading as a tacked-on second line.
         .frame(minHeight: 34, alignment: .top)
+        // A min-only frame is vertically COMPRESSIBLE: proposed less than its
+        // content, it reports the proposal and the rows overflow the card onto
+        // whatever sits below. It also drops the hosting view's minimum height
+        // under the ideal, so the panel window never has to grow when subagent
+        // or task rows arrive. Rigid height fixes both.
+        .fixedSize(horizontal: false, vertical: true)
         // Model chip (#105): pinned top-right, directly under the gauge/timer,
         // as an OVERLAY — it takes no row in the layout, so tasks and subagents
         // stack as if it weren't there. It never moves down with content and
