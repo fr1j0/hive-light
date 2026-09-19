@@ -45,7 +45,10 @@ final class LimitsFetcher: ObservableObject {
     /// call the endpoint, and hand back the token worth keeping — nil on auth
     /// failure so the caller re-reads a possibly-rotated token next cycle.
     nonisolated static func fetch(reusing knownToken: String?) async -> (limits: [PlanLimit], token: String?) {
-        guard let token = knownToken ?? keychainToken() else { return ([], nil) }
+        let quiet = UserDefaults.standard.bool(forKey: quietTokenReadKey)
+        guard let token = knownToken ?? (quiet ? securityToolToken() : keychainToken()) else {
+            return ([], nil)
+        }
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
@@ -89,10 +92,33 @@ final class LimitsFetcher: ObservableObject {
         ]
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data,
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = obj["claudeAiOauth"] as? [String: Any],
-              let token = oauth["accessToken"] as? String, !token.isEmpty else { return nil }
-        return token
+              let data = item as? Data else { return nil }
+        return oauthAccessToken(fromCredentialsJSON: data)
+    }
+
+    /// UserDefaults key of the opt-in below (SessionWatcher owns the setting).
+    nonisolated static let quietTokenReadKey = "quietTokenRead"
+
+    /// OPT-IN alternative read, through `/usr/bin/security`. The direct read
+    /// above is authorized per BUILD — "Always Allow" stops holding at every
+    /// app update, so each update re-raises the password prompt. Claude Code
+    /// maintains the item with the `security` tool, which is therefore already
+    /// trusted on it: reading the same way never prompts. Off by default
+    /// because it skips macOS's consent moment — the user chooses that in
+    /// Settings, the app never chooses it for them. No new exposure either
+    /// way: any process running as the user can already run this command.
+    nonisolated static func securityToolToken() -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        // Drain before waiting: a full pipe would block the child forever.
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+        return oauthAccessToken(fromCredentialsJSON: data)
     }
 }
