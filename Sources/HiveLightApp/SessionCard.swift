@@ -383,18 +383,29 @@ struct SubagentRows: View {
 /// reduce-motion by falling back to a static dot.
 private struct LivePulseDot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var animating = false
 
+    // Clock-driven, NOT an implicit repeatForever animation: flipping a state
+    // in onAppear shares a transaction with the panel window re-measuring, so
+    // the dot's position change was captured too and replayed forever — dots
+    // swung out of the card and back. A TimelineView has no animation for
+    // geometry to leak into. Same curve: 0.9s each way, eased.
     var body: some View {
+        if reduceMotion {
+            dot(level: 0)
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                dot(level: (1 - cos(t * .pi / 0.9)) / 2)
+            }
+        }
+    }
+
+    private func dot(level: Double) -> some View {
         Circle()
             .fill(PanelPalette.orange)
             .frame(width: 6, height: 6)
-            .scaleEffect(animating ? 1.0 : 0.7)
-            .opacity(animating ? 1.0 : 0.5)
-            .animation(reduceMotion ? nil
-                       : .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                       value: animating)
-            .onAppear { if !reduceMotion { animating = true } }
+            .scaleEffect(0.7 + 0.3 * level)
+            .opacity(0.5 + 0.5 * level)
     }
 }
 
