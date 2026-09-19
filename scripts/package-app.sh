@@ -14,9 +14,13 @@ APP="dist/Hive Light.app"
 swift build -c release --product HiveLightApp --build-system native
 swift build -c release --product hive-light-hook --build-system native
 
+# The mis-stamp's signature is "stamp != the SDK actually built against", so
+# compare those (by major) — not a fixed floor: CI's macos-14 runner honestly
+# stamps 14.x, and a hard-coded minimum would fail every release there.
 SDK_STAMP="$(otool -l .build/release/HiveLightApp | awk '/LC_BUILD_VERSION/{f=1} f && $1=="sdk"{print $2; exit}')"
-if [[ "${SDK_STAMP%%.*}" -lt 26 ]]; then
-    echo "error: HiveLightApp is stamped with SDK $SDK_STAMP — the panel would render with legacy square chrome." >&2
+SDK_REAL="$(xcrun --sdk macosx --show-sdk-version)"
+if [[ "${SDK_STAMP%%.*}" != "${SDK_REAL%%.*}" ]]; then
+    echo "error: HiveLightApp is stamped with SDK $SDK_STAMP but was built against SDK $SDK_REAL — the panel would render with legacy square chrome." >&2
     exit 1
 fi
 
