@@ -6,8 +6,19 @@ set -euo pipefail
 
 APP="dist/Hive Light.app"
 
-swift build -c release --product HiveLightApp
-swift build -c release --product hive-light-hook
+# --build-system native: Xcode 27's default SwiftPM backend (swiftbuild) stamps
+# the binary's linked SDK as the deployment target (13.0) instead of the real
+# SDK. AppKit gates modern window chrome on that stamp, so the MenuBarExtra
+# panel loses its rounded corners. native is deprecated — when it goes away,
+# the check below is what tells us swiftbuild still mis-stamps.
+swift build -c release --product HiveLightApp --build-system native
+swift build -c release --product hive-light-hook --build-system native
+
+SDK_STAMP="$(otool -l .build/release/HiveLightApp | awk '/LC_BUILD_VERSION/{f=1} f && $1=="sdk"{print $2; exit}')"
+if [[ "${SDK_STAMP%%.*}" -lt 26 ]]; then
+    echo "error: HiveLightApp is stamped with SDK $SDK_STAMP — the panel would render with legacy square chrome." >&2
+    exit 1
+fi
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
