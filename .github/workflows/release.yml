@@ -108,7 +108,10 @@ jobs:
 
       - name: Generate checksum
         run: |
-          shasum -a 256 dist/hive-light.zip > dist/hive-light.zip.sha256
+          # Hash from inside dist/ so the file records the bare filename —
+          # with the dist/ prefix, `shasum -c` on a downloaded copy can't find
+          # the zip and reports failure even though the hash is right.
+          (cd dist && shasum -a 256 hive-light.zip > hive-light.zip.sha256)
           cat dist/hive-light.zip.sha256
 
       - name: Compose release notes
