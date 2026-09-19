@@ -24,6 +24,13 @@ enum PanelPalette {
         case .idle: return green
         }
     }
+
+    /// The session card's opaque surface (option C) — a dark neutral with a
+    /// slight cool bias, one step lighter than the panel; the hover variant
+    /// lifts it once more. Opaque so a card reads the same over any window
+    /// bleeding through the translucent panel.
+    static let cardSurface = Color(red: 0.141, green: 0.153, blue: 0.173)      // #24272C
+    static let cardSurfaceHover = Color(red: 0.173, green: 0.188, blue: 0.212) // #2C3036
 }
 
 /// One session in the panel: a clickable card (status dot, title, live
@@ -124,6 +131,12 @@ struct SessionCard: View {
         // (no tasks/subagents) is sized to hold it, rather than the chip
         // reading as a tacked-on second line.
         .frame(minHeight: 34, alignment: .top)
+        // A min-only frame is vertically COMPRESSIBLE: proposed less than its
+        // content, it reports the proposal and the rows overflow the card onto
+        // whatever sits below. It also drops the hosting view's minimum height
+        // under the ideal, so the panel window never has to grow when subagent
+        // or task rows arrive. Rigid height fixes both.
+        .fixedSize(horizontal: false, vertical: true)
         // Model chip (#105): pinned top-right, directly under the gauge/timer,
         // as an OVERLAY — it takes no row in the layout, so tasks and subagents
         // stack as if it weren't there. It never moves down with content and
@@ -140,9 +153,13 @@ struct SessionCard: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
+        // Solid raised card (option C): an OPAQUE dark surface, a touch lighter
+        // than the panel, so it reads identically over any window behind the
+        // translucent panel — a faint white tint only lightened and washed out
+        // over bright backgrounds. Hover brightens it one step.
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(hovering ? 0.10 : 0.05))
+                .fill(hovering ? PanelPalette.cardSurfaceHover : PanelPalette.cardSurface)
         )
         // The whole card is the focus target — hover implies clickability;
         // the inner disclosure Button still wins clicks on its own area.
@@ -366,18 +383,29 @@ struct SubagentRows: View {
 /// reduce-motion by falling back to a static dot.
 private struct LivePulseDot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var animating = false
 
+    // Clock-driven, NOT an implicit repeatForever animation: flipping a state
+    // in onAppear shares a transaction with the panel window re-measuring, so
+    // the dot's position change was captured too and replayed forever — dots
+    // swung out of the card and back. A TimelineView has no animation for
+    // geometry to leak into. Same curve: 0.9s each way, eased.
     var body: some View {
+        if reduceMotion {
+            dot(level: 0)
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                dot(level: (1 - cos(t * .pi / 0.9)) / 2)
+            }
+        }
+    }
+
+    private func dot(level: Double) -> some View {
         Circle()
             .fill(PanelPalette.orange)
             .frame(width: 6, height: 6)
-            .scaleEffect(animating ? 1.0 : 0.7)
-            .opacity(animating ? 1.0 : 0.5)
-            .animation(reduceMotion ? nil
-                       : .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                       value: animating)
-            .onAppear { if !reduceMotion { animating = true } }
+            .scaleEffect(0.7 + 0.3 * level)
+            .opacity(0.5 + 0.5 * level)
     }
 }
 

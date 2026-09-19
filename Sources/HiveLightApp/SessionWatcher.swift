@@ -17,6 +17,12 @@ final class SessionWatcher: ObservableObject {
     @Published private(set) var animationPhase: Double = 0
     @Published private(set) var subagentsBySession: [String: SubagentList] = [:]
     @Published private(set) var taskSummaryBySession: [String: TaskSummary] = [:]
+    /// Project groups the user has folded, by groupKey. Lives here (not as a
+    /// panel @State) so a fold is a @Published change — the MenuBarExtra window
+    /// only re-measures its ideal height on @Published-driven re-renders, and a
+    /// @State fold left the expanded content overlapping the footer. In-memory;
+    /// resets on relaunch by design.
+    @Published var collapsedGroups: Set<String> = []
     /// Opt-in: show a running session's parallel subagents as indented rows.
     @Published var showSubagents: Bool {
         didSet {

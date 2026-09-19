@@ -22,23 +22,46 @@ struct PanelContent: View {
     /// with expanded subagent mini-rows (~1/3 card height each) folded in so
     /// a few heavily fanned-out sessions can't outgrow the screen either.
     private var estimatedRowWeight: Int {
-        let subagentRows = watcher.subagentsBySession.values.reduce(0) {
-            // A large fan-out's block scrolls internally (height-bounded at ~8
-            // rows), so cap its contribution to the panel-size estimate.
-            $0 + min($1.visible.count, 8)
-        }
-        // Task block at its collapsed baseline: current-task line + optional
-        // earlier-tasks disclosure, each weighing like a subagent mini-row.
-        // (Expanded history is user-opened and bounded by its own internal-scroll
-        // cap, so it stays out of the estimate.)
-        let taskRows = watcher.taskSummaryBySession.values.reduce(0) {
-            $0 + 1 + (taskHistoryToggleText($1) == nil ? 0 : 1)
+        // Iterate the same blocks the list renders so a FOLDED group counts as
+        // just its header (its cards aren't drawn) — otherwise the scroll frame
+        // over-reserves and reopens the bottom gap.
+        let grouped = watcher.sessionOrder == .project
+        let blocks = grouped ? sessionBlocks(watcher.sessions) : [watcher.sessions]
+        var sessionCount = 0, subCells = 0, taskCells = 0, headerCells = 0
+        for block in blocks {
+            if grouped { headerCells += 1 }
+            if grouped, let key = block.first?.groupKey, watcher.collapsedGroups.contains(key) {
+                continue   // folded: header only, cards hidden
+            }
+            sessionCount += block.count
+            for s in block {
+                if let sub = watcher.subagentsBySession[s.sessionID] {
+                    subCells += min(sub.visible.count, 8)   // fan-out scrolls internally past ~8
+                }
+                if let t = watcher.taskSummaryBySession[s.sessionID] {
+                    taskCells += 1 + (taskHistoryToggleText(t) == nil ? 0 : 1)
+                }
+            }
         }
         let usageRow = usageRowVisible ? 1 : 0
-        // Grouped mode adds one ~14pt header per block (~1/3 card height).
-        let headerRows = watcher.sessionOrder == .project
-            ? (sessionBlocks(watcher.sessions).count + 2) / 3 : 0
-        return watcher.sessions.count + (subagentRows + taskRows) / 3 + usageRow + headerRows
+        // Sub/task mini-rows and group headers each weigh ~1/3 of a card.
+        return sessionCount + (subCells + taskCells + headerCells) / 3 + usageRow
+    }
+
+    /// Most-urgent status color across a group's sessions — the folded
+    /// header's dot, so a collapsed group still signals what it's doing.
+    private func groupStatusColor(_ block: [Session]) -> Color {
+        for status: SessionStatus in [.error, .waiting, .attention, .handoff, .running, .idle]
+        where block.contains(where: { $0.status == status }) {
+            return PanelPalette.color(for: status)
+        }
+        return .secondary
+    }
+
+    /// The freshest activity age in a group — the folded header's timer.
+    private func groupNewestTimer(_ block: [Session], now: Date) -> String {
+        guard let newest = block.max(by: { $0.updatedAt < $1.updatedAt }) else { return "" }
+        return timerText(for: newest, now: now)
     }
 
     /// The usage row is the door to the Usage view — visible when its toggle
@@ -163,17 +186,53 @@ struct PanelContent: View {
                 // expires (a member-session id would reset the whole block's
                 // view state on expiry — the very churn this feature kills).
                 ForEach(sessionBlocks(watcher.sessions), id: \.first!.groupKey) { block in
+                    let key = block.first!.groupKey
+                    let collapsed = watcher.collapsedGroups.contains(key)
                     VStack(alignment: .leading, spacing: 4) {
-                        // The header carries the project name — the role the
-                        // classic card title plays — so it wears title color.
-                        Text(blockTitle(block).uppercased())
-                            .font(.system(size: 9, weight: .semibold))
-                            .kerning(1)
-                            .foregroundStyle(.primary)
+                        // The header carries the project name (title color) and
+                        // is the fold control — a chevron toggles the group.
+                        // Folded, it keeps a status dot + freshest timer so the
+                        // project still reads as alive.
+                        Button {
+                            // No animation: the panel window re-measures its
+                            // ideal height on this change, and animating a whole
+                            // group in/out races that re-measure — transitioning
+                            // cards overlap their neighbors. Instant fold keeps
+                            // the layout consistent every frame.
+                            if collapsed { watcher.collapsedGroups.remove(key) }
+                            else { watcher.collapsedGroups.insert(key) }
+                        } label: {
+                            HStack(spacing: 6) {
+                                // Project name leads at full prominence — the
+                                // fold chevron trails, quiet, so it never
+                                // competes with the header it controls.
+                                Text(blockTitle(block).uppercased())
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .kerning(1)
+                                    .foregroundStyle(.primary)
+                                Spacer(minLength: 8)
+                                if collapsed {
+                                    Circle().fill(groupStatusColor(block))
+                                        .frame(width: 7, height: 7)
+                                    Text(groupNewestTimer(block, now: now))
+                                        .font(.system(size: 10))
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                }
+                                Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.tertiary)
+                            }
                             .padding(.top, 4)
                             .padding(.leading, 4)
-                        ForEach(block, id: \.sessionID) { session in
-                            card(session, now: now, grouped: true)
+                            .padding(.trailing, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if !collapsed {
+                            ForEach(block, id: \.sessionID) { session in
+                                card(session, now: now, grouped: true)
+                            }
                         }
                     }
                 }
