@@ -40,6 +40,15 @@ final class SessionWatcher: ObservableObject {
             UserDefaults.standard.set(showPlanLimits, forKey: Self.showPlanLimitsKey)
         }
     }
+    /// Opt-in: read Claude Code's login through /usr/bin/security instead of
+    /// the Keychain API, so Claude Code's token refreshes stop re-raising the
+    /// password prompt.
+    /// Default OFF — it skips macOS's consent prompt, which is the user's call.
+    @Published var quietTokenRead: Bool {
+        didSet {
+            UserDefaults.standard.set(quietTokenRead, forKey: LimitsFetcher.quietTokenReadKey)
+        }
+    }
     /// Per-model usage-row overrides, keyed by model display name: true = show,
     /// false = hide. A name absent here uses the id-based default (off-plan
     /// leftovers auto-hide). Persisted so choices survive relaunch.
@@ -101,6 +110,7 @@ final class SessionWatcher: ObservableObject {
         self.showSubagents = UserDefaults.standard.bool(forKey: Self.showSubagentsKey)
         self.showUsageStats = UserDefaults.standard.bool(forKey: Self.showUsageStatsKey)
         self.showPlanLimits = UserDefaults.standard.bool(forKey: Self.showPlanLimitsKey)
+        self.quietTokenRead = UserDefaults.standard.bool(forKey: LimitsFetcher.quietTokenReadKey)
         self.usageModelOverrides =
             (UserDefaults.standard.dictionary(forKey: Self.usageModelOverridesKey) as? [String: Bool]) ?? [:]
         self.sessionOrder = UserDefaults.standard.string(forKey: Self.sessionOrderKey)

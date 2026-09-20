@@ -76,6 +76,19 @@ struct SettingsPane: View {
                 caption(planLimitsCaption)
                     .padding(.leading, 12)
 
+                // Child of the fetch toggle: only meaningful while limits are
+                // being fetched. Off by default — it trades macOS's consent
+                // prompt away, so the user opts in knowingly.
+                if watcher.showPlanLimits && hasOAuthLogin && watcher.showUsageStats {
+                    insetDivider
+                    row("Skip the Keychain prompt") {
+                        MiniSwitch(isOn: $watcher.quietTokenRead, label: "Skip the Keychain prompt")
+                    }
+                    .padding(.leading, 24)
+                    caption("macOS asks for your password again each time Claude Code refreshes its login (every few hours). On: reads the login through the system security tool Claude Code itself uses, which never asks. Takes effect the next time the login is read.")
+                        .padding(.leading, 24)
+                }
+
                 // Per-model rows: one switch per model Anthropic reports a
                 // weekly bucket for. Off-plan leftovers (no model id) default
                 // off; the switch is the override. Only shown when there ARE

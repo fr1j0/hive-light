@@ -129,3 +129,13 @@ public func limitResetText(kind: String, resetsAt: Date?, now: Date) -> String? 
     }
     return resetText(until: resetsAt, now: now)
 }
+
+/// The OAuth access token inside Claude Code's stored credentials JSON
+/// (`claudeAiOauth.accessToken`). Nil for anything malformed or empty —
+/// the caller treats that as "no subscription login" and shows no limits.
+public func oauthAccessToken(fromCredentialsJSON data: Data) -> String? {
+    guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let oauth = obj["claudeAiOauth"] as? [String: Any],
+          let token = oauth["accessToken"] as? String, !token.isEmpty else { return nil }
+    return token
+}
