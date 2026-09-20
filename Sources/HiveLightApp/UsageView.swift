@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import HiveLightCore
 
 /// The dedicated usage pane (#83): current-window per-model bars + reset,
@@ -7,6 +8,11 @@ import HiveLightCore
 struct UsageView: View {
     let snapshot: UsageSnapshot
     let limits: [PlanLimit]
+    /// Claude platform state, fetched when this view opens; empty until the
+    /// fetch lands (or if it fails) — the section is then not drawn.
+    var platform: [PlatformComponentStatus] = []
+    /// The status page's own headline ("All Systems Operational", …).
+    var platformHeadline: PlatformHeadline? = nil
     let now: Date
     let onBack: () -> Void
 
@@ -19,6 +25,11 @@ struct UsageView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             Divider().padding(.horizontal, -10)
+
+            if !platform.isEmpty || platformHeadline != nil {
+                platformSection
+                Divider().padding(.horizontal, -10)
+            }
 
             if snapshot.windowBurn.isEmpty && days.isEmpty && limits.isEmpty {
                 Text("No usage recorded yet")
@@ -62,6 +73,74 @@ struct UsageView: View {
     }
 
     // MARK: - Plan limits (fetched — real percentages)
+
+    /// Claude Code + Claude API, as status.claude.com reports them right now.
+    /// States carry the status-page color convention (green / orange / red /
+    /// blue) on both the dot and the state text — "operational" reads green,
+    /// not grey. Trouble is additionally set semibold. The whole section opens
+    /// the page.
+    private var platformSection: some View {
+        Button {
+            NSWorkspace.shared.open(StatusFetcher.pageURL)
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                sectionTitle("Claude status")
+                if let headline = platformHeadline {
+                    // The status page's own colored bar, in miniature: the
+                    // platform-wide verdict before the per-product detail.
+                    let color = Self.headlineColor(headline.level)
+                    HStack(spacing: 0) {
+                        Text(headline.text)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(color.opacity(0.20)))
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(color.opacity(0.45), lineWidth: 0.5))
+                    .padding(.bottom, 3)
+                }
+                ForEach(platform, id: \.label) { item in
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Self.platformColor(item.state))
+                            .frame(width: 6, height: 6)
+                        Text(item.label)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Text(item.state.text)
+                            .font(.system(size: 10, weight: item.state.isHealthy ? .regular : .semibold))
+                            .foregroundStyle(Self.platformColor(item.state))
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("From status.claude.com, fetched when this view opened. Click to open the status page.")
+        .accessibilityLabel("Claude status: " + (platformHeadline.map { $0.text + ". " } ?? "") + platform.map { "\($0.label) \($0.state.text)" }.joined(separator: ", "))
+    }
+
+    private static func headlineColor(_ level: PlatformHeadline.Level) -> Color {
+        switch level {
+        case .none: return PanelPalette.green
+        case .minor, .major: return PanelPalette.orange
+        case .critical: return PanelPalette.red
+        case .maintenance: return UsagePalette.color(for: .fable)
+        }
+    }
+
+    private static func platformColor(_ state: PlatformState) -> Color {
+        switch state {
+        case .operational: return PanelPalette.green
+        case .degraded, .partialOutage, .other: return PanelPalette.orange
+        case .majorOutage: return PanelPalette.red
+        case .maintenance: return UsagePalette.color(for: .fable)   // the panel's blue
+        }
+    }
 
     @ViewBuilder private var planLimitsSection: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -162,14 +241,13 @@ struct UsageView: View {
         var total: Int { tokensByModel.values.reduce(0, +) }
     }
 
-    /// Last 4 cache days before today + a live `today` row. The live number
-    /// wins over any cache entry for today — the cache lags a day.
+    /// The cache days that really fall in the 4 days before today + a live
+    /// `today` row. Claude Code only recomputes its cache when `/usage` is
+    /// opened there, so it can be weeks stale — stale days are dropped, never
+    /// passed off as recent. The live number wins over any cache entry for today.
     private var days: [Day] {
         let todayKey = Self.dayKey.string(from: now)
-        var rows: [Day] = snapshot.dailyHistory
-            .filter { $0.date < todayKey }
-            .sorted { $0.date < $1.date }
-            .suffix(4)
+        var rows: [Day] = recentDailyHistory(snapshot.dailyHistory, todayKey: todayKey, days: 4)
             .map { Day(id: $0.date, label: Self.dayLabel($0.date),
                        tokensByModel: $0.tokensByModel, isToday: false) }
         if !snapshot.todayBurn.isEmpty {
@@ -182,7 +260,7 @@ struct UsageView: View {
     @ViewBuilder private var daily: some View {
         if !days.isEmpty {
             VStack(alignment: .leading, spacing: 3) {
-                sectionTitle("Daily · last \(days.count) days")
+                sectionTitle(days.count > 1 ? "Daily · last \(days.count) days" : "Daily")
                 let maxTotal = days.map(\.total).max() ?? 1
                 ForEach(days) { day in
                     HStack(spacing: 8) {
@@ -212,6 +290,14 @@ struct UsageView: View {
                             .foregroundStyle(.tertiary)
                             .frame(width: 40, alignment: .trailing)
                     }
+                }
+                // No recent cache days: say why, and what refreshes them —
+                // otherwise a lone `today` row reads as broken history.
+                if !days.contains(where: { !$0.isToday }) {
+                    Text("Earlier days come from Claude Code's stats — open /usage there to refresh them.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 legend
             }
