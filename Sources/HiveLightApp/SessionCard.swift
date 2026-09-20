@@ -25,12 +25,17 @@ enum PanelPalette {
         }
     }
 
-    /// The session card's opaque surface (option C) — a dark neutral with a
-    /// slight cool bias, one step lighter than the panel; the hover variant
-    /// lifts it once more. Opaque so a card reads the same over any window
-    /// bleeding through the translucent panel.
-    static let cardSurface = Color(red: 0.141, green: 0.153, blue: 0.173)      // #24272C
-    static let cardSurfaceHover = Color(red: 0.173, green: 0.188, blue: 0.212) // #2C3036
+    /// The session card exists to GROUP a session's inner processes — it is a
+    /// boundary, not a patch. So: a faint veil of the label color (lifts on
+    /// dark, shades on light; follows the panel's chroma over any backdrop)
+    /// plus a hairline that carries the group edge. Tried and rejected: the
+    /// veil alone (edge washed out over bright windows) and an opaque or
+    /// half-opaque dark fill (read as a dark patch, the loudest thing in the
+    /// panel). Hover lifts both one step.
+    static let cardSurface = Color.primary.opacity(0.06)
+    static let cardSurfaceHover = Color.primary.opacity(0.10)
+    static let cardEdge = Color.primary.opacity(0.12)
+    static let cardEdgeHover = Color.primary.opacity(0.18)
 }
 
 /// One session in the panel: a clickable card (status dot, title, live
@@ -153,13 +158,16 @@ struct SessionCard: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        // Solid raised card (option C): an OPAQUE dark surface, a touch lighter
-        // than the panel, so it reads identically over any window behind the
-        // translucent panel — a faint white tint only lightened and washed out
-        // over bright backgrounds. Hover brightens it one step.
+        // Grouping surface: faint veil + hairline edge (see PanelPalette).
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(hovering ? PanelPalette.cardSurfaceHover : PanelPalette.cardSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(hovering ? PanelPalette.cardEdgeHover : PanelPalette.cardEdge,
+                              lineWidth: 0.5)
+                .allowsHitTesting(false)
         )
         // The whole card is the focus target — hover implies clickability;
         // the inner disclosure Button still wins clicks on its own area.
