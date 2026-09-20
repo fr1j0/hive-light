@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import HiveLightCore
 
 /// The dedicated usage pane (#83): current-window per-model bars + reset,
@@ -7,6 +8,9 @@ import HiveLightCore
 struct UsageView: View {
     let snapshot: UsageSnapshot
     let limits: [PlanLimit]
+    /// Claude platform state, fetched when this view opens; empty until the
+    /// fetch lands (or if it fails) — the section is then not drawn.
+    var platform: [PlatformComponentStatus] = []
     let now: Date
     let onBack: () -> Void
 
@@ -19,6 +23,11 @@ struct UsageView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             Divider().padding(.horizontal, -10)
+
+            if !platform.isEmpty {
+                platformSection
+                Divider().padding(.horizontal, -10)
+            }
 
             if snapshot.windowBurn.isEmpty && days.isEmpty && limits.isEmpty {
                 Text("No usage recorded yet")
@@ -62,6 +71,49 @@ struct UsageView: View {
     }
 
     // MARK: - Plan limits (fetched — real percentages)
+
+    /// Claude Code + Claude API, as status.claude.com reports them right now.
+    /// States carry the status-page color convention (green / orange / red /
+    /// blue) on the dot; the state text takes the color only when something is
+    /// wrong, so an all-clear stays quiet. The whole section opens the page.
+    private var platformSection: some View {
+        Button {
+            NSWorkspace.shared.open(StatusFetcher.pageURL)
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                sectionTitle("Claude status")
+                ForEach(platform, id: \.label) { item in
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Self.platformColor(item.state))
+                            .frame(width: 6, height: 6)
+                        Text(item.label)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Text(item.state.text)
+                            .font(.system(size: 10, weight: item.state.isHealthy ? .regular : .semibold))
+                            .foregroundStyle(item.state.isHealthy
+                                             ? AnyShapeStyle(.tertiary)
+                                             : AnyShapeStyle(Self.platformColor(item.state)))
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("From status.claude.com, fetched when this view opened. Click to open the status page.")
+        .accessibilityLabel("Claude status: " + platform.map { "\($0.label) \($0.state.text)" }.joined(separator: ", "))
+    }
+
+    private static func platformColor(_ state: PlatformState) -> Color {
+        switch state {
+        case .operational: return PanelPalette.green
+        case .degraded, .partialOutage, .other: return PanelPalette.orange
+        case .majorOutage: return PanelPalette.red
+        case .maintenance: return UsagePalette.color(for: .fable)   // the panel's blue
+        }
+    }
 
     @ViewBuilder private var planLimitsSection: some View {
         VStack(alignment: .leading, spacing: 3) {

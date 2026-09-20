@@ -12,6 +12,7 @@ struct PanelContent: View {
     @State private var showingUsage = false
     @StateObject private var usage = UsageScanner()
     @StateObject private var limitsFetcher = LimitsFetcher()
+    @StateObject private var statusFetcher = StatusFetcher()
     // Past the panelScrollThreshold weight the list scrolls at a height that
     // tracks the estimate (panelListScrollHeight). Below it, a plain stack
     // hugs the content — the .window panel sizes to ideal height, and a bare
@@ -85,8 +86,12 @@ struct PanelContent: View {
                               limits: watcher.showPlanLimits
                                 ? visibleLimits(limitsFetcher.limits, overrides: watcher.usageModelOverrides)
                                 : [],
+                              platform: statusFetcher.components,
                               now: context.date) { showingUsage = false }
                 }
+                // Fetch on open only — never polled. `.task` sits outside the
+                // 1s TimelineView so ticks don't re-fire it.
+                .task { statusFetcher.refresh() }
             } else {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     sessionList(now: context.date)

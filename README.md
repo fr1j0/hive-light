@@ -70,7 +70,9 @@ Click the icon for the full picture:
   inside the card, nested under the task that owns them.
 - Click a card to jump to that session's terminal.
 - An opt-in usage strip — 5-hour and weekly windows — that opens a full
-  usage view with plan limits and per-model daily history.
+  usage view with plan limits and per-model daily history. Opening it also
+  checks status.claude.com, so you can tell a Claude outage from your own
+  problem (Claude Code and the API; fetched on open, never polled).
 - Settings flip in place: session activity (tasks + subagents), usage stats
   and plan limits, session sort order, launch at login, needs-you
   notifications, and one-click install or removal of the Claude Code hooks.
