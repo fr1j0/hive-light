@@ -64,3 +64,39 @@ public func platformStatus(fromJSON data: Data) -> [PlatformComponentStatus] {
         return PlatformComponentStatus(label: product.label, state: PlatformState(raw: raw))
     }
 }
+
+/// The status page's own headline — the colored bar at its top ("All Systems
+/// Operational", "Partial System Outage", …) — from `/api/v2/summary.json`.
+public struct PlatformHeadline: Equatable, Sendable {
+    /// Statuspage's overall indicator. An indicator added later maps to
+    /// `.minor`: "something is up", never a false all-clear.
+    public enum Level: Equatable, Sendable {
+        case none, minor, major, critical, maintenance
+    }
+
+    public let level: Level
+    public let text: String
+
+    public init(level: Level, text: String) {
+        self.level = level
+        self.text = text
+    }
+}
+
+/// Nil when the payload carries no usable headline — the caller then draws
+/// the product rows without one.
+public func platformHeadline(fromJSON data: Data) -> PlatformHeadline? {
+    guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let status = obj["status"] as? [String: Any],
+          let indicator = status["indicator"] as? String,
+          let text = status["description"] as? String, !text.isEmpty else { return nil }
+    let level: PlatformHeadline.Level
+    switch indicator {
+    case "none": level = .none
+    case "major": level = .major
+    case "critical": level = .critical
+    case "maintenance": level = .maintenance
+    default: level = .minor
+    }
+    return PlatformHeadline(level: level, text: text)
+}

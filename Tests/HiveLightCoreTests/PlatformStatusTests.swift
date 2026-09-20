@@ -75,3 +75,49 @@ final class PlatformStatusTests: XCTestCase {
         XCTAssertTrue(platformStatus(fromJSON: Data()).isEmpty)
     }
 }
+
+final class PlatformHeadlineTests: XCTestCase {
+    private func summary(indicator: String, description: String) -> Data {
+        Data("""
+        {"page":{"id":"tymt9n04zgry"},
+         "status":{"indicator":"\(indicator)","description":"\(description)"},
+         "components":[{"id":"yyzkbfz2thpt","name":"Claude Code","status":"operational"}],
+         "incidents":[],"scheduled_maintenances":[]}
+        """.utf8)
+    }
+
+    /// Real shape, captured live 2026-09-20.
+    func testAllClearHeadline() {
+        let h = platformHeadline(fromJSON: summary(indicator: "none", description: "All Systems Operational"))
+        XCTAssertEqual(h, PlatformHeadline(level: .none, text: "All Systems Operational"))
+    }
+
+    func testDecodesEveryIndicator() {
+        let cases: [(String, PlatformHeadline.Level)] = [
+            ("none", .none), ("minor", .minor), ("major", .major),
+            ("critical", .critical), ("maintenance", .maintenance),
+        ]
+        for (raw, expected) in cases {
+            XCTAssertEqual(platformHeadline(fromJSON: summary(indicator: raw, description: "x"))?.level, expected, raw)
+        }
+    }
+
+    /// An indicator Statuspage adds later reads as "something is up", never as all-clear.
+    func testUnknownIndicatorIsNotAllClear() {
+        let h = platformHeadline(fromJSON: summary(indicator: "apocalyptic", description: "Everything Is On Fire"))
+        XCTAssertEqual(h?.level, .minor)
+        XCTAssertEqual(h?.text, "Everything Is On Fire")
+    }
+
+    func testMissingOrEmptyHeadlineIsNil() {
+        XCTAssertNil(platformHeadline(fromJSON: Data(#"{"components":[]}"#.utf8)))
+        XCTAssertNil(platformHeadline(fromJSON: summary(indicator: "none", description: "")))
+        XCTAssertNil(platformHeadline(fromJSON: Data(#"{"status":{"indicator":"no"#.utf8)))
+    }
+
+    /// The summary payload still feeds the per-product rows.
+    func testSummaryPayloadAlsoYieldsComponents() {
+        let rows = platformStatus(fromJSON: summary(indicator: "none", description: "All Systems Operational"))
+        XCTAssertEqual(rows.map(\.label), ["Claude Code"])
+    }
+}

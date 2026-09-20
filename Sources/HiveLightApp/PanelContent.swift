@@ -87,6 +87,7 @@ struct PanelContent: View {
                                 ? visibleLimits(limitsFetcher.limits, overrides: watcher.usageModelOverrides)
                                 : [],
                               platform: statusFetcher.components,
+                              platformHeadline: statusFetcher.headline,
                               now: context.date) { showingUsage = false }
                 }
                 // Fetch on open only — never polled. `.task` sits outside the

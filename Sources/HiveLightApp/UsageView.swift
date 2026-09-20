@@ -11,6 +11,8 @@ struct UsageView: View {
     /// Claude platform state, fetched when this view opens; empty until the
     /// fetch lands (or if it fails) — the section is then not drawn.
     var platform: [PlatformComponentStatus] = []
+    /// The status page's own headline ("All Systems Operational", …).
+    var platformHeadline: PlatformHeadline? = nil
     let now: Date
     let onBack: () -> Void
 
@@ -24,7 +26,7 @@ struct UsageView: View {
             header
             Divider().padding(.horizontal, -10)
 
-            if !platform.isEmpty {
+            if !platform.isEmpty || platformHeadline != nil {
                 platformSection
                 Divider().padding(.horizontal, -10)
             }
@@ -74,14 +76,32 @@ struct UsageView: View {
 
     /// Claude Code + Claude API, as status.claude.com reports them right now.
     /// States carry the status-page color convention (green / orange / red /
-    /// blue) on the dot; the state text takes the color only when something is
-    /// wrong, so an all-clear stays quiet. The whole section opens the page.
+    /// blue) on both the dot and the state text — "operational" reads green,
+    /// not grey. Trouble is additionally set semibold. The whole section opens
+    /// the page.
     private var platformSection: some View {
         Button {
             NSWorkspace.shared.open(StatusFetcher.pageURL)
         } label: {
             VStack(alignment: .leading, spacing: 3) {
                 sectionTitle("Claude status")
+                if let headline = platformHeadline {
+                    // The status page's own colored bar, in miniature: the
+                    // platform-wide verdict before the per-product detail.
+                    let color = Self.headlineColor(headline.level)
+                    HStack(spacing: 0) {
+                        Text(headline.text)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(color.opacity(0.20)))
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(color.opacity(0.45), lineWidth: 0.5))
+                    .padding(.bottom, 3)
+                }
                 ForEach(platform, id: \.label) { item in
                     HStack(spacing: 8) {
                         Circle()
@@ -93,9 +113,7 @@ struct UsageView: View {
                         Spacer(minLength: 8)
                         Text(item.state.text)
                             .font(.system(size: 10, weight: item.state.isHealthy ? .regular : .semibold))
-                            .foregroundStyle(item.state.isHealthy
-                                             ? AnyShapeStyle(.tertiary)
-                                             : AnyShapeStyle(Self.platformColor(item.state)))
+                            .foregroundStyle(Self.platformColor(item.state))
                     }
                 }
             }
@@ -103,7 +121,16 @@ struct UsageView: View {
         }
         .buttonStyle(.plain)
         .help("From status.claude.com, fetched when this view opened. Click to open the status page.")
-        .accessibilityLabel("Claude status: " + platform.map { "\($0.label) \($0.state.text)" }.joined(separator: ", "))
+        .accessibilityLabel("Claude status: " + (platformHeadline.map { $0.text + ". " } ?? "") + platform.map { "\($0.label) \($0.state.text)" }.joined(separator: ", "))
+    }
+
+    private static func headlineColor(_ level: PlatformHeadline.Level) -> Color {
+        switch level {
+        case .none: return PanelPalette.green
+        case .minor, .major: return PanelPalette.orange
+        case .critical: return PanelPalette.red
+        case .maintenance: return UsagePalette.color(for: .fable)
+        }
     }
 
     private static func platformColor(_ state: PlatformState) -> Color {
