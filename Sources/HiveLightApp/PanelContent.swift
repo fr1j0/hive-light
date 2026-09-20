@@ -149,6 +149,10 @@ struct PanelContent: View {
                 ScrollView {
                     sessionRows(now: now)
                 }
+                // Hide the scroller: with "Show scroll bars: Always" the panel
+                // otherwise gets a thick legacy bar down its edge. Trackpad /
+                // wheel still scroll.
+                .scrollIndicators(.hidden)
                 .frame(height: height)
             } else {
                 sessionRows(now: now)

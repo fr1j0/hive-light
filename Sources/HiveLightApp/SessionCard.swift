@@ -227,6 +227,7 @@ struct TaskBlock: View {
                     // block.
                     if summary.doneSubjects.count > Self.maxInlineRows {
                         ScrollView { historyRows(summary.doneSubjects) }
+                            .scrollIndicators(.hidden)
                             .frame(height: Self.scrollBlockHeight)
                     } else {
                         historyRows(summary.doneSubjects)
@@ -321,6 +322,7 @@ struct SubagentRows: View {
                 // ideal-height sizing.
                 if list.visible.count > Self.maxInlineRows {
                     ScrollView { expandedRows }
+                        .scrollIndicators(.hidden)
                         .frame(height: Self.scrollBlockHeight)
                 } else {
                     expandedRows
