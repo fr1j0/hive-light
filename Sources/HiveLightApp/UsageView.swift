@@ -214,14 +214,13 @@ struct UsageView: View {
         var total: Int { tokensByModel.values.reduce(0, +) }
     }
 
-    /// Last 4 cache days before today + a live `today` row. The live number
-    /// wins over any cache entry for today — the cache lags a day.
+    /// The cache days that really fall in the 4 days before today + a live
+    /// `today` row. Claude Code only recomputes its cache when `/usage` is
+    /// opened there, so it can be weeks stale — stale days are dropped, never
+    /// passed off as recent. The live number wins over any cache entry for today.
     private var days: [Day] {
         let todayKey = Self.dayKey.string(from: now)
-        var rows: [Day] = snapshot.dailyHistory
-            .filter { $0.date < todayKey }
-            .sorted { $0.date < $1.date }
-            .suffix(4)
+        var rows: [Day] = recentDailyHistory(snapshot.dailyHistory, todayKey: todayKey, days: 4)
             .map { Day(id: $0.date, label: Self.dayLabel($0.date),
                        tokensByModel: $0.tokensByModel, isToday: false) }
         if !snapshot.todayBurn.isEmpty {
@@ -234,7 +233,7 @@ struct UsageView: View {
     @ViewBuilder private var daily: some View {
         if !days.isEmpty {
             VStack(alignment: .leading, spacing: 3) {
-                sectionTitle("Daily · last \(days.count) days")
+                sectionTitle(days.count > 1 ? "Daily · last \(days.count) days" : "Daily")
                 let maxTotal = days.map(\.total).max() ?? 1
                 ForEach(days) { day in
                     HStack(spacing: 8) {
@@ -264,6 +263,14 @@ struct UsageView: View {
                             .foregroundStyle(.tertiary)
                             .frame(width: 40, alignment: .trailing)
                     }
+                }
+                // No recent cache days: say why, and what refreshes them —
+                // otherwise a lone `today` row reads as broken history.
+                if !days.contains(where: { !$0.isToday }) {
+                    Text("Earlier days come from Claude Code's stats — open /usage there to refresh them.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 legend
             }
