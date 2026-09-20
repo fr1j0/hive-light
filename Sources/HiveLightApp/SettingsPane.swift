@@ -85,7 +85,7 @@ struct SettingsPane: View {
                         MiniSwitch(isOn: $watcher.quietTokenRead, label: "Skip the Keychain prompt")
                     }
                     .padding(.leading, 24)
-                    caption("macOS asks for your password again after every Hive Light update. On: reads the login through the system security tool Claude Code itself uses, which never asks. Takes effect the next time the login is read.")
+                    caption("macOS asks for your password again each time Claude Code refreshes its login (every few hours). On: reads the login through the system security tool Claude Code itself uses, which never asks. Takes effect the next time the login is read.")
                         .padding(.leading, 24)
                 }
 

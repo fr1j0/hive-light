@@ -41,7 +41,8 @@ final class SessionWatcher: ObservableObject {
         }
     }
     /// Opt-in: read Claude Code's login through /usr/bin/security instead of
-    /// the Keychain API, so app updates stop re-raising the password prompt.
+    /// the Keychain API, so Claude Code's token refreshes stop re-raising the
+    /// password prompt.
     /// Default OFF — it skips macOS's consent prompt, which is the user's call.
     @Published var quietTokenRead: Bool {
         didSet {

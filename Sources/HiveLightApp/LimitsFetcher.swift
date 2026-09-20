@@ -99,14 +99,17 @@ final class LimitsFetcher: ObservableObject {
     /// UserDefaults key of the opt-in below (SessionWatcher owns the setting).
     nonisolated static let quietTokenReadKey = "quietTokenRead"
 
-    /// OPT-IN alternative read, through `/usr/bin/security`. The direct read
-    /// above is authorized per BUILD — "Always Allow" stops holding at every
-    /// app update, so each update re-raises the password prompt. Claude Code
-    /// maintains the item with the `security` tool, which is therefore already
-    /// trusted on it: reading the same way never prompts. Off by default
-    /// because it skips macOS's consent moment — the user chooses that in
-    /// Settings, the app never chooses it for them. No new exposure either
-    /// way: any process running as the user can already run this command.
+    /// OPT-IN alternative read, through `/usr/bin/security`. Claude Code
+    /// rewrites this item on every token refresh (every few hours), and each
+    /// rewrite resets the item's access list — so "Always Allow" on the direct
+    /// read above only lasts until the next refresh, then macOS prompts for
+    /// the password again. (Observed 2026-09-20: app untouched since 15:22,
+    /// item rewritten 18:55, prompt followed — no app update involved.) Claude
+    /// Code maintains the item with the `security` tool, which is therefore
+    /// always trusted on it: reading the same way never prompts. Off by
+    /// default because it skips macOS's consent moment — the user chooses
+    /// that in Settings, the app never chooses it for them. No new exposure
+    /// either way: any process running as the user can already run this.
     nonisolated static func securityToolToken() -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
